@@ -93,7 +93,7 @@ export default function AdminAnalytics() {
       const productSales: { [key: string]: { naziv: string; count: number; revenue: number } } = {};
       
       orders.filter(o => o.status !== 'preklicano').forEach(order => {
-        order.artikli.forEach((artikel: any) => {
+        (order.artikli as any[]).forEach((artikel: any) => {
           const key = artikel.naziv || 'Neznano';
           if (!productSales[key]) {
             productSales[key] = { naziv: key, count: 0, revenue: 0 };

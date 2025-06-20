@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { User, Settings, LogOut, ShoppingBag, Heart, Search } from 'lucide-react';
 import { LanguageSelector } from './LanguageSelector';
 import { Input } from '@/components/ui/input';
+import { CartIcon } from './CartIcon';
 
 export const Header = () => {
   const { t } = useTranslation();
@@ -75,6 +76,9 @@ export const Header = () => {
 
             {/* Language Selector */}
             <LanguageSelector />
+
+            {/* Cart Icon */}
+            <CartIcon />
 
             {/* User Menu or Auth Buttons */}
             {user ? (

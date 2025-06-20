@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductCard } from '@/components/products/ProductCard';
@@ -44,6 +45,7 @@ const PRODUCTS_PER_PAGE = 12;
 
 export default function Products() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [colors, setColors] = useState<string[]>([]);
@@ -63,6 +65,14 @@ export default function Products() {
   useEffect(() => {
     loadCategoriesAndColors();
   }, []);
+
+  // Set initial category from URL params
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [searchParams]);
 
   // Load products when filters change
   useEffect(() => {

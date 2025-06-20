@@ -64,14 +64,16 @@ export default function ProductDetail() {
         .select('*')
         .eq('na_voljo', true);
 
-      // Check if id is a UUID (product ID) or slug
-      if (id?.includes('-') && id.length > 10) {
-        query = query.or(`seo_slug.eq.${id},id.eq.${id}`);
-      } else {
+      // Check if id is a SEO slug or UUID
+      if (id?.length === 36 && id.includes('-') && id.split('-').length === 5) {
+        // Looks like a UUID
         query = query.eq('id', id);
+      } else {
+        // Treat as SEO slug
+        query = query.eq('seo_slug', id);
       }
 
-      const { data, error } = await query.single();
+      const { data, error } = await query.maybeSingle();
 
       if (error || !data) {
         navigate('/404');

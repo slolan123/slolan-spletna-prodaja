@@ -56,6 +56,7 @@ export default function ProductDetail() {
   }, [id]);
 
   const loadProduct = async () => {
+    console.log('Loading product with id:', id);
     try {
       setLoading(true);
       
@@ -64,9 +65,11 @@ export default function ProductDetail() {
         .select('*')
         .eq('na_voljo', true);
 
-      // Check if id is a SEO slug or UUID
-      if (id?.length === 36 && id.includes('-') && id.split('-').length === 5) {
-        // Looks like a UUID
+      // Check if id is a UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      
+      if (uuidRegex.test(id)) {
+        // It's a UUID
         query = query.eq('id', id);
       } else {
         // Treat as SEO slug

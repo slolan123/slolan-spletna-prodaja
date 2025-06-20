@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Settings, Users, Package, BarChart3, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 
 export default function Admin() {
   const { t } = useTranslation();
@@ -66,22 +66,19 @@ export default function Admin() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
           >
-            <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <section.icon className={`h-6 w-6 ${section.color}`} />
-                  {section.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">{section.description}</p>
-                <div className="mt-4">
-                  <span className="text-sm text-muted-foreground">
-                    Funkcionalnost v razvoju
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            <Link to={section.href}>
+              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <section.icon className={`h-6 w-6 ${section.color}`} />
+                    {section.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">{section.description}</p>
+                </CardContent>
+              </Card>
+            </Link>
           </motion.div>
         ))}
       </div>

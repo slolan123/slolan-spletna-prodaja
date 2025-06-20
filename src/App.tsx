@@ -19,6 +19,10 @@ import Wishlist from "./pages/Wishlist";
 import Orders from "./pages/Orders";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import NotFound from "./pages/NotFound";
 import "./lib/i18n";
 
@@ -48,6 +52,10 @@ const App = () => (
                     <Route path="/orders" element={<Orders />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/admin" element={<Admin />} />
+                    <Route path="/admin/users" element={<AdminUsers />} />
+                    <Route path="/admin/products" element={<AdminProducts />} />
+                    <Route path="/admin/orders" element={<AdminOrders />} />
+                    <Route path="/admin/analytics" element={<AdminAnalytics />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>

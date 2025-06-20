@@ -53,9 +53,9 @@ export default function Products() {
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedColor, setSelectedColor] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedColor, setSelectedColor] = useState('all');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
 
@@ -118,15 +118,15 @@ export default function Products() {
         query = query.or(`naziv.ilike.%${searchTerm}%,opis.ilike.%${searchTerm}%,koda.ilike.%${searchTerm}%`);
       }
 
-      if (selectedCategory) {
+      if (selectedCategory && selectedCategory !== 'all') {
         query = query.eq('kategorija_id', selectedCategory);
       }
 
-      if (selectedStatus) {
+      if (selectedStatus && selectedStatus !== 'all') {
         query = query.eq('status', selectedStatus as 'novo' | 'znizano' | 'prodano');
       }
 
-      if (selectedColor) {
+      if (selectedColor && selectedColor !== 'all') {
         query = query.eq('barva', selectedColor);
       }
 
@@ -169,9 +169,9 @@ export default function Products() {
 
   const clearFilters = () => {
     setSearchTerm('');
-    setSelectedCategory('');
-    setSelectedStatus('');
-    setSelectedColor('');
+    setSelectedCategory('all');
+    setSelectedStatus('all');
+    setSelectedColor('all');
     setMinPrice('');
     setMaxPrice('');
   };
@@ -179,9 +179,9 @@ export default function Products() {
   const getActiveFiltersCount = () => {
     let count = 0;
     if (searchTerm) count++;
-    if (selectedCategory) count++;
-    if (selectedStatus) count++;
-    if (selectedColor) count++;
+    if (selectedCategory && selectedCategory !== 'all') count++;
+    if (selectedStatus && selectedStatus !== 'all') count++;
+    if (selectedColor && selectedColor !== 'all') count++;
     if (minPrice) count++;
     if (maxPrice) count++;
     return count;

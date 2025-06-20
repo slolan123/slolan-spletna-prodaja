@@ -60,7 +60,7 @@ export const ProductFilters = ({
   };
 
   const statusOptions = [
-    { value: '', label: t('common.all') },
+    { value: 'all', label: t('common.all') },
     { value: 'novo', label: 'Novo' },
     { value: 'znizano', label: 'Znižano' },
     { value: 'prodano', label: 'Prodano' },
@@ -99,7 +99,7 @@ export const ProductFilters = ({
             <SelectValue placeholder="Izberi kategorijo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">{t('common.all')}</SelectItem>
+            <SelectItem value="all">{t('common.all')}</SelectItem>
             {categories.map(category => (
               <SelectItem key={category.id} value={category.id}>
                 {getLocalizedCategoryName(category)}
@@ -135,7 +135,7 @@ export const ProductFilters = ({
               <SelectValue placeholder="Izberi barvo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t('common.all')}</SelectItem>
+              <SelectItem value="all">{t('common.all')}</SelectItem>
               {colors.map(color => (
                 <SelectItem key={color} value={color}>
                   {color}

@@ -23,6 +23,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminReviews from "./pages/admin/AdminReviews";
 import NotFound from "./pages/NotFound";
 import "./lib/i18n";
 
@@ -55,6 +56,7 @@ const App = () => (
                     <Route path="/admin/users" element={<AdminUsers />} />
                     <Route path="/admin/products" element={<AdminProducts />} />
                     <Route path="/admin/orders" element={<AdminOrders />} />
+                    <Route path="/admin/reviews" element={<AdminReviews />} />
                     <Route path="/admin/analytics" element={<AdminAnalytics />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />

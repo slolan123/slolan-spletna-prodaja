@@ -37,6 +37,13 @@ export default function Admin() {
       color: 'text-purple-500',
     },
     {
+      title: 'Ocene',
+      description: 'Upravljanje ocen uporabnikov',
+      icon: BarChart3,
+      href: '/admin/reviews',
+      color: 'text-yellow-500',
+    },
+    {
       title: 'Statistike',
       description: 'Pregled prodajnih statistik',
       icon: BarChart3,

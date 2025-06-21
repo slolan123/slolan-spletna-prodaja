@@ -61,9 +61,9 @@ export const ProductFilters = ({
 
   const statusOptions = [
     { value: 'all', label: t('common.all') },
-    { value: 'novo', label: 'Novo' },
-    { value: 'znizano', label: 'Znižano' },
-    { value: 'prodano', label: 'Prodano' },
+    { value: 'novo', label: t('status.new') },
+    { value: 'znizano', label: t('status.discounted') },
+    { value: 'prodano', label: t('status.sold') },
   ];
 
   return (
@@ -152,7 +152,7 @@ export const ProductFilters = ({
         <div className="flex gap-2">
           <Input
             type="number"
-            placeholder={t('products.from')}
+            placeholder={t('common.from')}
             value={minPrice}
             onChange={(e) => onMinPriceChange(e.target.value)}
             min="0"
@@ -160,7 +160,7 @@ export const ProductFilters = ({
           />
           <Input
             type="number"
-            placeholder={t('products.to')}
+            placeholder={t('common.to')}
             value={maxPrice}
             onChange={(e) => onMaxPriceChange(e.target.value)}
             min="0"

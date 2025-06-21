@@ -185,6 +185,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ocene_izdelkov: {
+        Row: {
+          created_at: string
+          id: string
+          izdelek_id: string
+          komentar: string | null
+          ocena: number
+          odobreno: boolean
+          updated_at: string
+          uporabnik_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          izdelek_id: string
+          komentar?: string | null
+          ocena: number
+          odobreno?: boolean
+          updated_at?: string
+          uporabnik_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          izdelek_id?: string
+          komentar?: string | null
+          ocena?: number
+          odobreno?: boolean
+          updated_at?: string
+          uporabnik_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ocene_izdelkov_izdelek_id_fkey"
+            columns: ["izdelek_id"]
+            isOneToOne: false
+            referencedRelation: "predmeti"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       predmeti: {
         Row: {
           atributi: Json | null

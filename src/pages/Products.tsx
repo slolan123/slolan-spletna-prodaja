@@ -208,7 +208,7 @@ export default function Products() {
           {t('products.title')}
         </motion.h1>
         <p className="text-muted-foreground">
-          Odkrijte naš izbor kakovostnih zaseženih predmetov po odličnih cenah.
+          Odkrijte naš izbor kakovostnih izdelkov po odličnih cenah.
         </p>
       </div>
 
@@ -280,7 +280,7 @@ export default function Products() {
                     variant="outline"
                     size="lg"
                   >
-                    {loading ? t('common.loading') : t('products.showMore')}
+                    {loading ? t('common.loading') : t('common.showMore')}
                   </Button>
                 </div>
               )}

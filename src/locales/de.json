@@ -17,7 +17,12 @@
     "next": "Weiter",
     "previous": "Zurück",
     "home": "Startseite",
-    "more": "Mehr"
+    "more": "Mehr",
+    "all": "Alle",
+    "from": "Von",
+    "to": "Bis",
+    "showMore": "Mehr anzeigen",
+    "back": "Zurück"
   },
   "nav": {
     "home": "Startseite",

@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
+import { ProductReviews } from '@/components/products/ProductReviews';
 
 interface Product {
   id: string;
@@ -344,6 +345,11 @@ export default function ProductDetail() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Product Reviews */}
+      <div className="container mx-auto px-4 py-8">
+        <ProductReviews productId={product.id} />
       </div>
     </div>
   );

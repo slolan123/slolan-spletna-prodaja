@@ -17,7 +17,12 @@
     "next": "Naprej",
     "previous": "Nazaj",
     "home": "Domov",
-    "more": "Več"
+    "more": "Več",
+    "all": "Vse",
+    "from": "Od",
+    "to": "Do",
+    "showMore": "Prikaži več",
+    "back": "Nazaj"
   },
   "nav": {
     "home": "Domov",
@@ -80,7 +85,16 @@
     "details": "Podrobnosti",
     "attributes": "Lastnosti",
     "reviews": "Ocene",
-    "relatedProducts": "Podobni izdelki"
+    "relatedProducts": "Podobni izdelki",
+    "from": "Od",
+    "to": "Do",
+    "showMore": "Prikaži več",
+    "writeReview": "Napišite oceno",
+    "rating": "Ocena",
+    "reviewText": "Vaša ocena",
+    "submitReview": "Oddaj oceno",
+    "noReviews": "Ni ocen",
+    "stars": "zvezdic"
   },
   "categories": {
     "title": "Kategorije",

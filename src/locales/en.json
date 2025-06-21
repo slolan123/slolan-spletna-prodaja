@@ -17,7 +17,12 @@
     "next": "Next",
     "previous": "Previous",
     "home": "Home",
-    "more": "More"
+    "more": "More",
+    "all": "All",
+    "from": "From",
+    "to": "To",
+    "showMore": "Show More",
+    "back": "Back"
   },
   "nav": {
     "home": "Home",
@@ -80,7 +85,16 @@
     "details": "Details",
     "attributes": "Attributes",
     "reviews": "Reviews",
-    "relatedProducts": "Related Products"
+    "relatedProducts": "Related Products",
+    "from": "From",
+    "to": "To",
+    "showMore": "Show More",
+    "writeReview": "Write Review",
+    "rating": "Rating",
+    "reviewText": "Your Review",
+    "submitReview": "Submit Review",
+    "noReviews": "No Reviews",
+    "stars": "stars"
   },
   "categories": {
     "title": "Categories",

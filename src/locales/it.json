@@ -17,7 +17,12 @@
     "next": "Avanti",
     "previous": "Indietro",
     "home": "Home",
-    "more": "Altro"
+    "more": "Altro",
+    "all": "Tutti",
+    "from": "Da",
+    "to": "A",
+    "showMore": "Mostra di più",
+    "back": "Indietro"
   },
   "nav": {
     "home": "Home",

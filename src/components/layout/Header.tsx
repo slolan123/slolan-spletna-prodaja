@@ -34,7 +34,7 @@ export const Header = () => {
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
             <Link to="/" className="text-2xl font-bold text-primary">
-              LoziceProdaja
+              Selviks
             </Link>
           </div>
 

@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { ImageUpload } from '@/components/admin/ImageUpload';
 
 interface Product {
   id: string;
@@ -404,11 +405,10 @@ export default function AdminProducts() {
       </div>
 
       <div>
-        <label className="text-sm font-medium">URL slike</label>
-        <Input
+        <label className="text-sm font-medium mb-2 block">Slika izdelka</label>
+        <ImageUpload
           value={formData.slika_url}
-          onChange={(e) => setFormData({ ...formData, slika_url: e.target.value })}
-          placeholder="https://example.com/slika.jpg"
+          onChange={(url) => setFormData({ ...formData, slika_url: url })}
         />
       </div>
 

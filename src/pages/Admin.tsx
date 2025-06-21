@@ -30,6 +30,13 @@ export default function Admin() {
       color: 'text-green-500',
     },
     {
+      title: 'Kategorije',
+      description: 'Upravljanje kategorij izdelkov',
+      icon: Package,
+      href: '/admin/categories',
+      color: 'text-cyan-500',
+    },
+    {
       title: 'Naročila',
       description: 'Pregled in upravljanje naročil',
       icon: FileText,

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -12,7 +13,7 @@ export const Footer = () => {
           {/* Company Info */}
           <div>
             <h3 className="text-lg font-semibold text-primary mb-4">
-              LoziceProdaja
+              Slolan
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               Profesionalna trgovina za zasežene predmete z velikimi količinami in konkurenčnimi cenami.
@@ -77,7 +78,7 @@ export const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4">Kontakt</h4>
             <div className="space-y-2 text-sm text-muted-foreground">
-              <p>Email: info@loziceprodaja.si</p>
+              <p>Email: info@slolan.si</p>
               <p>Telefon: +386 1 234 5678</p>
               <p>Naslov: Ljubljana, Slovenija</p>
             </div>
@@ -85,7 +86,7 @@ export const Footer = () => {
         </div>
 
         <div className="border-t border-border mt-8 pt-4 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 LoziceProdaja. Vse pravice pridržane.</p>
+          <p>&copy; 2024 Slolan. Vse pravice pridržane.</p>
         </div>
       </div>
     </footer>

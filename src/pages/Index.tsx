@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -25,7 +26,7 @@ const Index = () => {
             className="text-4xl md:text-6xl font-bold mb-6 text-foreground bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
           >
             <Sparkles className="inline-block w-8 h-8 md:w-12 md:h-12 mr-2 text-primary" />
-            Selviks
+            Slolan
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -34,7 +35,7 @@ export const Header = () => {
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
             <Link to="/" className="text-2xl font-bold text-primary">
-              Selviks
+              Slolan
             </Link>
           </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Package, Search, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
@@ -39,6 +39,221 @@ interface Category {
   naziv: string;
 }
 
+interface FormData {
+  naziv: string;
+  cena: string;
+  popust: string;
+  slika_url: string;
+  status: 'novo' | 'znizano' | 'prodano';
+  zaloga: string;
+  na_voljo: boolean;
+  koda: string;
+  seo_slug: string;
+  barva: string;
+  kategorija_id: string;
+  opis: string;
+  masa: string;
+}
+
+// Separate ProductForm component to prevent re-rendering issues
+const ProductForm = React.memo(({ 
+  formData, 
+  onFormDataChange, 
+  categories, 
+  onSubmit, 
+  onCancel, 
+  isEdit = false 
+}: {
+  formData: FormData;
+  onFormDataChange: (data: FormData) => void;
+  categories: Category[];
+  onSubmit: () => void;
+  onCancel: () => void;
+  isEdit?: boolean;
+}) => {
+  const handleInputChange = useCallback((field: keyof FormData, value: string | boolean) => {
+    onFormDataChange({
+      ...formData,
+      [field]: value
+    });
+  }, [formData, onFormDataChange]);
+
+  return (
+    <div className="space-y-4 max-h-96 overflow-y-auto">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium">Naziv *</label>
+          <Input
+            value={formData.naziv}
+            onChange={(e) => handleInputChange('naziv', e.target.value)}
+            placeholder="Naziv izdelka (vsaj 2 znaka)"
+            autoComplete="off"
+            autoFocus={!isEdit}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Koda *</label>
+          <Input
+            value={formData.koda}
+            onChange={(e) => handleInputChange('koda', e.target.value)}
+            placeholder="Koda izdelka (vsaj 2 znaka)"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        <div>
+          <label className="text-sm font-medium">Cena (€) *</label>
+          <Input
+            type="number"
+            value={formData.cena}
+            onChange={(e) => handleInputChange('cena', e.target.value)}
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Popust (%)</label>
+          <Input
+            type="number"
+            value={formData.popust}
+            onChange={(e) => handleInputChange('popust', e.target.value)}
+            placeholder="0"
+            min="0"
+            max="100"
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Zaloga</label>
+          <Input
+            type="number"
+            value={formData.zaloga}
+            onChange={(e) => handleInputChange('zaloga', e.target.value)}
+            placeholder="0"
+            min="0"
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Masa (kg)</label>
+          <Input
+            type="number"
+            value={formData.masa}
+            onChange={(e) => handleInputChange('masa', e.target.value)}
+            placeholder="0.000"
+            step="0.001"
+            min="0"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium">Status</label>
+          <Select 
+            value={formData.status} 
+            onValueChange={(value: any) => handleInputChange('status', value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="novo">Novo</SelectItem>
+              <SelectItem value="znizano">Znižano</SelectItem>
+              <SelectItem value="prodano">Prodano</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-sm font-medium">Kategorija</label>
+          <Select 
+            value={formData.kategorija_id} 
+            onValueChange={(value) => handleInputChange('kategorija_id', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Izberi kategorijo" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(category => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.naziv}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium">Barva</label>
+          <Input
+            value={formData.barva}
+            onChange={(e) => handleInputChange('barva', e.target.value)}
+            placeholder="Barva izdelka"
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">SEO slug</label>
+          <Input
+            value={formData.seo_slug}
+            onChange={(e) => handleInputChange('seo_slug', e.target.value)}
+            placeholder="seo-slug-izdelka"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="text-sm font-medium mb-2 block">Slika izdelka</label>
+        <ImageUpload
+          value={formData.slika_url}
+          onChange={(url) => handleInputChange('slika_url', url)}
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium">Opis</label>
+        <Textarea
+          value={formData.opis}
+          onChange={(e) => handleInputChange('opis', e.target.value)}
+          placeholder="Opis izdelka"
+          rows={3}
+        />
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Switch
+          checked={formData.na_voljo}
+          onCheckedChange={(checked) => handleInputChange('na_voljo', checked)}
+        />
+        <label className="text-sm font-medium">Na voljo</label>
+      </div>
+
+      <div className="flex gap-2">
+        <Button onClick={onSubmit} className="flex-1">
+          {isEdit ? 'Posodobi' : 'Dodaj'} izdelek
+        </Button>
+        <Button 
+          variant="outline" 
+          onClick={onCancel}
+          className="flex-1"
+        >
+          Prekliči
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+ProductForm.displayName = 'ProductForm';
+
 export default function AdminProducts() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -52,12 +267,12 @@ export default function AdminProducts() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     naziv: '',
     cena: '',
     popust: '',
     slika_url: '',
-    status: 'novo' as 'novo' | 'znizano' | 'prodano',
+    status: 'novo',
     zaloga: '',
     na_voljo: true,
     koda: '',
@@ -110,7 +325,7 @@ export default function AdminProducts() {
     }
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({
       naziv: '',
       cena: '',
@@ -126,9 +341,9 @@ export default function AdminProducts() {
       opis: '',
       masa: '',
     });
-  };
+  }, []);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     if (!formData.naziv.trim() || formData.naziv.trim().length < 2) {
       toast({
         title: "Napaka",
@@ -184,9 +399,9 @@ export default function AdminProducts() {
     }
 
     return true;
-  };
+  }, [formData, toast]);
 
-  const handleAdd = async () => {
+  const handleAdd = useCallback(async () => {
     if (!validateForm()) return;
 
     try {
@@ -233,9 +448,9 @@ export default function AdminProducts() {
         variant: "destructive",
       });
     }
-  };
+  }, [formData, validateForm, resetForm, toast, loadProducts]);
 
-  const handleEdit = async () => {
+  const handleEdit = useCallback(async () => {
     if (!selectedProduct || !validateForm()) return;
 
     try {
@@ -279,7 +494,7 @@ export default function AdminProducts() {
         variant: "destructive",
       });
     }
-  };
+  }, [selectedProduct, formData, validateForm, resetForm, toast, loadProducts]);
 
   const handleDelete = async (productId: string) => {
     if (!confirm('Ali ste prepričani, da želite izbrisati ta izdelek?')) {
@@ -353,6 +568,20 @@ export default function AdminProducts() {
     setEditDialogOpen(true);
   };
 
+  const handleFormDataChange = useCallback((newFormData: FormData) => {
+    setFormData(newFormData);
+  }, []);
+
+  const handleAddCancel = useCallback(() => {
+    setAddDialogOpen(false);
+    resetForm();
+  }, [resetForm]);
+
+  const handleEditCancel = useCallback(() => {
+    setEditDialogOpen(false);
+    resetForm();
+  }, [resetForm]);
+
   const filteredProducts = products.filter(product => 
     product.naziv.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.koda.toLowerCase().includes(searchTerm.toLowerCase())
@@ -372,175 +601,6 @@ export default function AdminProducts() {
       </div>
     );
   }
-
-  const ProductForm = ({ isEdit = false }) => (
-    <div className="space-y-4 max-h-96 overflow-y-auto">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium">Naziv *</label>
-          <Input
-            value={formData.naziv}
-            onChange={(e) => setFormData({ ...formData, naziv: e.target.value })}
-            placeholder="Naziv izdelka (vsaj 2 znaka)"
-            autoComplete="off"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Koda *</label>
-          <Input
-            value={formData.koda}
-            onChange={(e) => setFormData({ ...formData, koda: e.target.value })}
-            placeholder="Koda izdelka (vsaj 2 znaka)"
-            autoComplete="off"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-4">
-        <div>
-          <label className="text-sm font-medium">Cena (€) *</label>
-          <Input
-            type="number"
-            value={formData.cena}
-            onChange={(e) => setFormData({ ...formData, cena: e.target.value })}
-            placeholder="0.00"
-            step="0.01"
-            min="0"
-            autoComplete="off"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Popust (%)</label>
-          <Input
-            type="number"
-            value={formData.popust}
-            onChange={(e) => setFormData({ ...formData, popust: e.target.value })}
-            placeholder="0"
-            min="0"
-            max="100"
-            autoComplete="off"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Zaloga</label>
-          <Input
-            type="number"
-            value={formData.zaloga}
-            onChange={(e) => setFormData({ ...formData, zaloga: e.target.value })}
-            placeholder="0"
-            min="0"
-            autoComplete="off"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Masa (kg)</label>
-          <Input
-            type="number"
-            value={formData.masa}
-            onChange={(e) => setFormData({ ...formData, masa: e.target.value })}
-            placeholder="0.000"
-            step="0.001"
-            min="0"
-            autoComplete="off"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium">Status</label>
-          <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="novo">Novo</SelectItem>
-              <SelectItem value="znizano">Znižano</SelectItem>
-              <SelectItem value="prodano">Prodano</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="text-sm font-medium">Kategorija</label>
-          <Select value={formData.kategorija_id} onValueChange={(value) => setFormData({ ...formData, kategorija_id: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Izberi kategorijo" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map(category => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.naziv}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium">Barva</label>
-          <Input
-            value={formData.barva}
-            onChange={(e) => setFormData({ ...formData, barva: e.target.value })}
-            placeholder="Barva izdelka"
-            autoComplete="off"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">SEO slug</label>
-          <Input
-            value={formData.seo_slug}
-            onChange={(e) => setFormData({ ...formData, seo_slug: e.target.value })}
-            placeholder="seo-slug-izdelka"
-            autoComplete="off"
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="text-sm font-medium mb-2 block">Slika izdelka</label>
-        <ImageUpload
-          value={formData.slika_url}
-          onChange={(url) => setFormData({ ...formData, slika_url: url })}
-        />
-      </div>
-
-      <div>
-        <label className="text-sm font-medium">Opis</label>
-        <Textarea
-          value={formData.opis}
-          onChange={(e) => setFormData({ ...formData, opis: e.target.value })}
-          placeholder="Opis izdelka"
-          rows={3}
-        />
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <Switch
-          checked={formData.na_voljo}
-          onCheckedChange={(checked) => setFormData({ ...formData, na_voljo: checked })}
-        />
-        <label className="text-sm font-medium">Na voljo</label>
-      </div>
-
-      <div className="flex gap-2">
-        <Button onClick={isEdit ? handleEdit : handleAdd} className="flex-1">
-          {isEdit ? 'Posodobi' : 'Dodaj'} izdelek
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={() => {
-            isEdit ? setEditDialogOpen(false) : setAddDialogOpen(false);
-            resetForm();
-          }}
-          className="flex-1"
-        >
-          Prekliči
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -607,7 +667,14 @@ export default function AdminProducts() {
             <DialogHeader>
               <DialogTitle>Dodaj nov izdelek</DialogTitle>
             </DialogHeader>
-            <ProductForm />
+            <ProductForm
+              formData={formData}
+              onFormDataChange={handleFormDataChange}
+              categories={categories}
+              onSubmit={handleAdd}
+              onCancel={handleAddCancel}
+              isEdit={false}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -709,7 +776,14 @@ export default function AdminProducts() {
           <DialogHeader>
             <DialogTitle>Uredi izdelek</DialogTitle>
           </DialogHeader>
-          <ProductForm isEdit={true} />
+          <ProductForm
+            formData={formData}
+            onFormDataChange={handleFormDataChange}
+            categories={categories}
+            onSubmit={handleEdit}
+            onCancel={handleEditCancel}
+            isEdit={true}
+          />
         </DialogContent>
       </Dialog>
     </div>

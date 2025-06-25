@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -130,19 +129,19 @@ export default function AdminProducts() {
   };
 
   const validateForm = () => {
-    if (!formData.naziv.trim()) {
+    if (!formData.naziv.trim() || formData.naziv.trim().length < 2) {
       toast({
         title: "Napaka",
-        description: "Naziv izdelka je obvezen.",
+        description: "Naziv izdelka mora imeti vsaj 2 znaka.",
         variant: "destructive",
       });
       return false;
     }
     
-    if (!formData.koda.trim()) {
+    if (!formData.koda.trim() || formData.koda.trim().length < 2) {
       toast({
         title: "Napaka",
-        description: "Koda izdelka je obvezna.",
+        description: "Koda izdelka mora imeti vsaj 2 znaka.",
         variant: "destructive",
       });
       return false;
@@ -152,6 +151,15 @@ export default function AdminProducts() {
       toast({
         title: "Napaka",
         description: "Cena mora biti večja od 0.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (formData.popust && (parseFloat(formData.popust) < 0 || parseFloat(formData.popust) > 100)) {
+      toast({
+        title: "Napaka",
+        description: "Popust mora biti med 0 in 100%.",
         variant: "destructive",
       });
       return false;
@@ -373,8 +381,8 @@ export default function AdminProducts() {
           <Input
             value={formData.naziv}
             onChange={(e) => setFormData({ ...formData, naziv: e.target.value })}
-            placeholder="Naziv izdelka"
-            required
+            placeholder="Naziv izdelka (vsaj 2 znaka)"
+            autoComplete="off"
           />
         </div>
         <div>
@@ -382,8 +390,8 @@ export default function AdminProducts() {
           <Input
             value={formData.koda}
             onChange={(e) => setFormData({ ...formData, koda: e.target.value })}
-            placeholder="Koda izdelka"
-            required
+            placeholder="Koda izdelka (vsaj 2 znaka)"
+            autoComplete="off"
           />
         </div>
       </div>
@@ -398,7 +406,7 @@ export default function AdminProducts() {
             placeholder="0.00"
             step="0.01"
             min="0"
-            required
+            autoComplete="off"
           />
         </div>
         <div>
@@ -410,6 +418,7 @@ export default function AdminProducts() {
             placeholder="0"
             min="0"
             max="100"
+            autoComplete="off"
           />
         </div>
         <div>
@@ -420,6 +429,7 @@ export default function AdminProducts() {
             onChange={(e) => setFormData({ ...formData, zaloga: e.target.value })}
             placeholder="0"
             min="0"
+            autoComplete="off"
           />
         </div>
         <div>
@@ -431,6 +441,7 @@ export default function AdminProducts() {
             placeholder="0.000"
             step="0.001"
             min="0"
+            autoComplete="off"
           />
         </div>
       </div>
@@ -473,6 +484,7 @@ export default function AdminProducts() {
             value={formData.barva}
             onChange={(e) => setFormData({ ...formData, barva: e.target.value })}
             placeholder="Barva izdelka"
+            autoComplete="off"
           />
         </div>
         <div>
@@ -481,6 +493,7 @@ export default function AdminProducts() {
             value={formData.seo_slug}
             onChange={(e) => setFormData({ ...formData, seo_slug: e.target.value })}
             placeholder="seo-slug-izdelka"
+            autoComplete="off"
           />
         </div>
       </div>

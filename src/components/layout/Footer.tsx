@@ -16,7 +16,7 @@ export const Footer = () => {
               Slolan
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Profesionalna trgovina za zasežene predmete z velikimi količinami in konkurenčnimi cenami.
+              Profesionalna trgovina za predmete z velikimi količinami in konkurenčnimi cenami.
             </p>
           </div>
 

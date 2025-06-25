@@ -235,6 +235,7 @@ export type Database = {
           id: string
           kategorija_id: string | null
           koda: string
+          masa: number | null
           na_voljo: boolean
           naziv: string
           naziv_de: string | null
@@ -263,6 +264,7 @@ export type Database = {
           id?: string
           kategorija_id?: string | null
           koda: string
+          masa?: number | null
           na_voljo?: boolean
           naziv: string
           naziv_de?: string | null
@@ -291,6 +293,7 @@ export type Database = {
           id?: string
           kategorija_id?: string | null
           koda?: string
+          masa?: number | null
           na_voljo?: boolean
           naziv?: string
           naziv_de?: string | null

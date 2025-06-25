@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -30,6 +31,7 @@ interface Product {
   barva?: string;
   kategorija_id?: string;
   opis?: string;
+  masa?: number;
   created_at: string;
 }
 
@@ -64,6 +66,7 @@ export default function AdminProducts() {
     barva: '',
     kategorija_id: '',
     opis: '',
+    masa: '',
   });
 
   useEffect(() => {
@@ -122,31 +125,89 @@ export default function AdminProducts() {
       barva: '',
       kategorija_id: '',
       opis: '',
+      masa: '',
     });
   };
 
+  const validateForm = () => {
+    if (!formData.naziv.trim()) {
+      toast({
+        title: "Napaka",
+        description: "Naziv izdelka je obvezen.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    if (!formData.koda.trim()) {
+      toast({
+        title: "Napaka",
+        description: "Koda izdelka je obvezna.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!formData.cena || parseFloat(formData.cena) <= 0) {
+      toast({
+        title: "Napaka",
+        description: "Cena mora biti večja od 0.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (formData.zaloga && parseInt(formData.zaloga) < 0) {
+      toast({
+        title: "Napaka",
+        description: "Zaloga ne more biti negativna.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (formData.masa && parseFloat(formData.masa) < 0) {
+      toast({
+        title: "Napaka",
+        description: "Masa ne more biti negativna.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
   const handleAdd = async () => {
+    if (!validateForm()) return;
+
     try {
       const productData = {
-        naziv: formData.naziv,
+        naziv: formData.naziv.trim(),
         cena: parseFloat(formData.cena),
         popust: formData.popust ? parseFloat(formData.popust) : 0,
-        slika_url: formData.slika_url || null,
+        slika_url: formData.slika_url.trim() || null,
         status: formData.status,
-        zaloga: parseInt(formData.zaloga),
+        zaloga: formData.zaloga ? parseInt(formData.zaloga) : 0,
         na_voljo: formData.na_voljo,
-        koda: formData.koda,
-        seo_slug: formData.seo_slug || null,
-        barva: formData.barva || null,
+        koda: formData.koda.trim(),
+        seo_slug: formData.seo_slug.trim() || null,
+        barva: formData.barva.trim() || null,
         kategorija_id: formData.kategorija_id || null,
-        opis: formData.opis || null,
+        opis: formData.opis.trim() || null,
+        masa: formData.masa ? parseFloat(formData.masa) : null,
       };
+
+      console.log('Adding product with data:', productData);
 
       const { error } = await supabase
         .from('predmeti')
         .insert([productData]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       await loadProducts();
       setAddDialogOpen(false);
@@ -160,29 +221,30 @@ export default function AdminProducts() {
       console.error('Error adding product:', error);
       toast({
         title: "Napaka",
-        description: "Napaka pri dodajanju izdelka.",
+        description: `Napaka pri dodajanju izdelka: ${error.message || 'Neznana napaka'}`,
         variant: "destructive",
       });
     }
   };
 
   const handleEdit = async () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || !validateForm()) return;
 
     try {
       const productData = {
-        naziv: formData.naziv,
+        naziv: formData.naziv.trim(),
         cena: parseFloat(formData.cena),
         popust: formData.popust ? parseFloat(formData.popust) : 0,
-        slika_url: formData.slika_url || null,
+        slika_url: formData.slika_url.trim() || null,
         status: formData.status,
-        zaloga: parseInt(formData.zaloga),
+        zaloga: formData.zaloga ? parseInt(formData.zaloga) : 0,
         na_voljo: formData.na_voljo,
-        koda: formData.koda,
-        seo_slug: formData.seo_slug || null,
-        barva: formData.barva || null,
+        koda: formData.koda.trim(),
+        seo_slug: formData.seo_slug.trim() || null,
+        barva: formData.barva.trim() || null,
         kategorija_id: formData.kategorija_id || null,
-        opis: formData.opis || null,
+        opis: formData.opis.trim() || null,
+        masa: formData.masa ? parseFloat(formData.masa) : null,
       };
 
       const { error } = await supabase
@@ -278,6 +340,7 @@ export default function AdminProducts() {
       barva: product.barva || '',
       kategorija_id: product.kategorija_id || '',
       opis: product.opis || '',
+      masa: product.masa?.toString() || '',
     });
     setEditDialogOpen(true);
   };
@@ -306,32 +369,36 @@ export default function AdminProducts() {
     <div className="space-y-4 max-h-96 overflow-y-auto">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium">Naziv</label>
+          <label className="text-sm font-medium">Naziv *</label>
           <Input
             value={formData.naziv}
             onChange={(e) => setFormData({ ...formData, naziv: e.target.value })}
             placeholder="Naziv izdelka"
+            required
           />
         </div>
         <div>
-          <label className="text-sm font-medium">Koda</label>
+          <label className="text-sm font-medium">Koda *</label>
           <Input
             value={formData.koda}
             onChange={(e) => setFormData({ ...formData, koda: e.target.value })}
             placeholder="Koda izdelka"
+            required
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div>
-          <label className="text-sm font-medium">Cena (€)</label>
+          <label className="text-sm font-medium">Cena (€) *</label>
           <Input
             type="number"
             value={formData.cena}
             onChange={(e) => setFormData({ ...formData, cena: e.target.value })}
             placeholder="0.00"
             step="0.01"
+            min="0"
+            required
           />
         </div>
         <div>
@@ -341,6 +408,8 @@ export default function AdminProducts() {
             value={formData.popust}
             onChange={(e) => setFormData({ ...formData, popust: e.target.value })}
             placeholder="0"
+            min="0"
+            max="100"
           />
         </div>
         <div>
@@ -350,6 +419,18 @@ export default function AdminProducts() {
             value={formData.zaloga}
             onChange={(e) => setFormData({ ...formData, zaloga: e.target.value })}
             placeholder="0"
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">Masa (kg)</label>
+          <Input
+            type="number"
+            value={formData.masa}
+            onChange={(e) => setFormData({ ...formData, masa: e.target.value })}
+            placeholder="0.000"
+            step="0.001"
+            min="0"
           />
         </div>
       </div>
@@ -529,6 +610,7 @@ export default function AdminProducts() {
               <TableRow>
                 <TableHead>Izdelek</TableHead>
                 <TableHead>Cena</TableHead>
+                <TableHead>Masa</TableHead>
                 <TableHead>Zaloga</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Na voljo</TableHead>
@@ -558,6 +640,9 @@ export default function AdminProducts() {
                         <div className="text-sm text-green-600">-{product.popust}%</div>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {product.masa ? `${product.masa} kg` : '-'}
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.zaloga > 0 ? 'default' : 'destructive'}>

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Package, Search, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
-import { WandSparkles as Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -74,7 +73,6 @@ const ProductForm = React.memo(({
   isEdit?: boolean;
 }) => {
   const { toast } = useToast();
-  const [aiLoading, setAiLoading] = useState(false);
 
   const handleInputChange = useCallback((field: keyof FormData, value: string | boolean | string[]) => {
     onFormDataChange({
@@ -86,112 +84,6 @@ const ProductForm = React.memo(({
   const handleImagesChange = useCallback((urls: string[]) => {
     handleInputChange('slike_urls', urls);
   }, [handleInputChange]);
-
-  const handleAiFill = async () => {
-    if (formData.slike_urls.length === 0) {
-      toast({
-        title: "Napaka",
-        description: "Najprej naložite sliko, da lahko AI analizira produkt.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setAiLoading(true);
-    
-    try {
-      console.log('Starting AI analysis with image:', formData.slike_urls[0]);
-      console.log('Existing form data:', formData);
-      
-      const response = await supabase.functions.invoke('ai-product-analysis', {
-        body: {
-          imageUrl: formData.slike_urls[0],
-          existingData: {
-            naziv: formData.naziv,
-            koda: formData.koda,
-            cena: formData.cena,
-            barva: formData.barva,
-            opis: formData.opis,
-            masa: formData.masa,
-            seo_slug: formData.seo_slug,
-          }
-        }
-      });
-
-      console.log('AI analysis response:', response);
-
-      if (response.error) {
-        console.error('Supabase function error:', response.error);
-        throw new Error(response.error.message || 'Neznana napaka pri klicanju AI funkcije');
-      }
-
-      if (!response.data) {
-        console.error('No data in response:', response);
-        throw new Error('Ni podatkov v odgovoru AI funkcije');
-      }
-
-      const { suggestions } = response.data;
-      
-      if (!suggestions) {
-        console.error('No suggestions in response data:', response.data);
-        throw new Error('Ni predlogov v AI odgovoru');
-      }
-
-      if (suggestions.error) {
-        console.error('Error in suggestions:', suggestions.error);
-        throw new Error(suggestions.error);
-      }
-
-      console.log('AI suggestions received:', suggestions);
-
-      // Only fill empty fields
-      const updatedFormData = { ...formData };
-      let fieldsUpdated = 0;
-      
-      if (!formData.naziv && suggestions.naziv) {
-        updatedFormData.naziv = suggestions.naziv;
-        fieldsUpdated++;
-      }
-      if (!formData.barva && suggestions.barva) {
-        updatedFormData.barva = suggestions.barva;
-        fieldsUpdated++;
-      }
-      if (!formData.opis && suggestions.opis) {
-        updatedFormData.opis = suggestions.opis;
-        fieldsUpdated++;
-      }
-      if (!formData.masa && suggestions.masa) {
-        updatedFormData.masa = suggestions.masa;
-        fieldsUpdated++;
-      }
-      if (!formData.seo_slug && suggestions.seo_slug) {
-        updatedFormData.seo_slug = suggestions.seo_slug;
-        fieldsUpdated++;
-      }
-
-      if (fieldsUpdated === 0) {
-        toast({
-          title: "AI analiza končana",
-          description: "Vsa polja so že izpolnjena. AI ni dodal novih predlogov.",
-        });
-      } else {
-        onFormDataChange(updatedFormData);
-        toast({
-          title: "AI analiza končana",
-          description: `${fieldsUpdated} polj je bilo izpolnjenih z AI predlogi.`,
-        });
-      }
-    } catch (error) {
-      console.error('AI fill error:', error);
-      toast({
-        title: "Napaka pri AI analizi",
-        description: error.message || 'Neznana napaka pri AI analizi',
-        variant: "destructive",
-      });
-    } finally {
-      setAiLoading(false);
-    }
-  };
 
   return (
     <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -326,31 +218,7 @@ const ProductForm = React.memo(({
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium">Slike izdelka</label>
-          {formData.slike_urls.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAiFill}
-              disabled={aiLoading}
-              className="ml-2"
-            >
-              {aiLoading ? (
-                <>
-                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
-                  AI analizira...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  AI Fill
-                </>
-              )}
-            </Button>
-          )}
-        </div>
+        <label className="text-sm font-medium">Slike izdelka</label>
         <MultiImageUpload
           value={formData.slike_urls}
           onChange={handleImagesChange}

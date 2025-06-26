@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Heart, ShoppingCart, Share2, Package, Truck } from 'lucide-react';
+import { ArrowLeft, Heart, ShoppingCart, Share2, Package, Truck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -168,7 +169,24 @@ export default function ProductDetail() {
     }
   };
 
-  const images = product?.slike_urls || (product?.slika_url ? [product.slika_url] : ['/placeholder.svg']);
+  // Get all product images
+  const images = React.useMemo(() => {
+    if (product?.slike_urls && product.slike_urls.length > 0) {
+      return product.slike_urls;
+    } else if (product?.slika_url) {
+      return [product.slika_url];
+    }
+    return ['/placeholder.svg'];
+  }, [product]);
+
+  const nextImage = () => {
+    setSelectedImage((prev) => (prev + 1) % images.length);
+  };
+
+  const previousImage = () => {
+    setSelectedImage((prev) => (prev - 1 + images.length) % images.length);
+  };
+
   const isOutOfStock = !product?.na_voljo || product?.zaloga === 0;
   const inWishlist = product ? isInWishlist(product.id) : false;
 
@@ -219,8 +237,9 @@ export default function ProductDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Product Images */}
         <div className="space-y-4">
+          {/* Main Image */}
           <motion.div 
-            className="aspect-square rounded-lg overflow-hidden bg-muted"
+            className="relative aspect-square rounded-lg overflow-hidden bg-muted group"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
@@ -229,16 +248,46 @@ export default function ProductDetail() {
               alt={getLocalizedName()}
               className="w-full h-full object-cover"
             />
+            
+            {/* Image Navigation */}
+            {images.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={previousImage}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={nextImage}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                
+                {/* Image Counter */}
+                <div className="absolute bottom-2 right-2 bg-black/60 text-white text-sm px-2 py-1 rounded">
+                  {selectedImage + 1} / {images.length}
+                </div>
+              </>
+            )}
           </motion.div>
           
+          {/* Image Thumbnails */}
           {images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto">
+            <div className="flex gap-2 overflow-x-auto pb-2">
               {images.map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
-                  className={`flex-shrink-0 w-20 h-20 rounded overflow-hidden border-2 ${
-                    selectedImage === index ? 'border-primary' : 'border-transparent'
+                  className={`flex-shrink-0 w-20 h-20 rounded overflow-hidden border-2 transition-all ${
+                    selectedImage === index 
+                      ? 'border-primary ring-2 ring-primary/20' 
+                      : 'border-transparent hover:border-gray-300'
                   }`}
                 >
                   <img

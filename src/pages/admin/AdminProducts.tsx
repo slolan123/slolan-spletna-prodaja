@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ImageUpload } from '@/components/admin/ImageUpload';
+import { MultiImageUpload } from '@/components/admin/MultiImageUpload';
 
 interface Product {
   id: string;
@@ -22,6 +22,7 @@ interface Product {
   cena: number;
   popust?: number;
   slika_url?: string;
+  slike_urls?: string[];
   status: 'novo' | 'znizano' | 'prodano';
   zaloga: number;
   na_voljo: boolean;
@@ -43,7 +44,7 @@ interface FormData {
   naziv: string;
   cena: string;
   popust: string;
-  slika_url: string;
+  slike_urls: string[];
   status: 'novo' | 'znizano' | 'prodano';
   zaloga: string;
   na_voljo: boolean;
@@ -71,12 +72,16 @@ const ProductForm = React.memo(({
   onCancel: () => void;
   isEdit?: boolean;
 }) => {
-  const handleInputChange = useCallback((field: keyof FormData, value: string | boolean) => {
+  const handleInputChange = useCallback((field: keyof FormData, value: string | boolean | string[]) => {
     onFormDataChange({
       ...formData,
       [field]: value
     });
   }, [formData, onFormDataChange]);
+
+  const handleImagesChange = useCallback((urls: string[]) => {
+    handleInputChange('slike_urls', urls);
+  }, [handleInputChange]);
 
   return (
     <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -211,10 +216,11 @@ const ProductForm = React.memo(({
       </div>
 
       <div>
-        <label className="text-sm font-medium mb-2 block">Slika izdelka</label>
-        <ImageUpload
-          value={formData.slika_url}
-          onChange={(url) => handleInputChange('slika_url', url)}
+        <label className="text-sm font-medium mb-2 block">Slike izdelka</label>
+        <MultiImageUpload
+          value={formData.slike_urls}
+          onChange={handleImagesChange}
+          maxImages={10}
         />
       </div>
 
@@ -271,7 +277,7 @@ export default function AdminProducts() {
     naziv: '',
     cena: '',
     popust: '',
-    slika_url: '',
+    slike_urls: [],
     status: 'novo',
     zaloga: '',
     na_voljo: true,
@@ -330,7 +336,7 @@ export default function AdminProducts() {
       naziv: '',
       cena: '',
       popust: '',
-      slika_url: '',
+      slike_urls: [],
       status: 'novo',
       zaloga: '',
       na_voljo: true,
@@ -409,7 +415,8 @@ export default function AdminProducts() {
         naziv: formData.naziv.trim(),
         cena: parseFloat(formData.cena),
         popust: formData.popust ? parseFloat(formData.popust) : 0,
-        slika_url: formData.slika_url.trim() || null,
+        slika_url: formData.slike_urls[0] || null,
+        slike_urls: formData.slike_urls.length > 0 ? formData.slike_urls : null,
         status: formData.status,
         zaloga: formData.zaloga ? parseInt(formData.zaloga) : 0,
         na_voljo: formData.na_voljo,
@@ -458,7 +465,8 @@ export default function AdminProducts() {
         naziv: formData.naziv.trim(),
         cena: parseFloat(formData.cena),
         popust: formData.popust ? parseFloat(formData.popust) : 0,
-        slika_url: formData.slika_url.trim() || null,
+        slika_url: formData.slike_urls[0] || null,
+        slike_urls: formData.slike_urls.length > 0 ? formData.slike_urls : null,
         status: formData.status,
         zaloga: formData.zaloga ? parseInt(formData.zaloga) : 0,
         na_voljo: formData.na_voljo,
@@ -554,7 +562,7 @@ export default function AdminProducts() {
       naziv: product.naziv,
       cena: product.cena.toString(),
       popust: product.popust?.toString() || '',
-      slika_url: product.slika_url || '',
+      slike_urls: product.slike_urls || (product.slika_url ? [product.slika_url] : []),
       status: product.status,
       zaloga: product.zaloga.toString(),
       na_voljo: product.na_voljo,
@@ -663,7 +671,7 @@ export default function AdminProducts() {
               Dodaj izdelek
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Dodaj nov izdelek</DialogTitle>
             </DialogHeader>
@@ -698,73 +706,86 @@ export default function AdminProducts() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={product.slika_url || '/placeholder.svg'} 
-                        alt={product.naziv}
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                      <div>
-                        <div className="font-medium">{product.naziv}</div>
-                        <div className="text-sm text-muted-foreground">{product.koda}</div>
+              {filteredProducts.map((product) => {
+                const displayImage = product.slike_urls && product.slike_urls.length > 0 
+                  ? product.slike_urls[0] 
+                  : product.slika_url || '/placeholder.svg';
+                
+                return (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <img 
+                            src={displayImage} 
+                            alt={product.naziv}
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                          {product.slike_urls && product.slike_urls.length > 1 && (
+                            <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                              {product.slike_urls.length}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium">{product.naziv}</div>
+                          <div className="text-sm text-muted-foreground">{product.koda}</div>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">€{product.cena.toFixed(2)}</div>
-                      {product.popust && product.popust > 0 && (
-                        <div className="text-sm text-green-600">-{product.popust}%</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {product.masa ? `${product.masa} kg` : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={product.zaloga > 0 ? 'default' : 'destructive'}>
-                      {product.zaloga} kos
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={
-                        product.status === 'novo' ? 'default' :
-                        product.status === 'znizano' ? 'secondary' : 'destructive'
-                      }
-                    >
-                      {product.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={product.na_voljo}
-                      onCheckedChange={(checked) => handleToggleAvailability(product.id, checked)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(product)}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">€{product.cena.toFixed(2)}</div>
+                        {product.popust && product.popust > 0 && (
+                          <div className="text-sm text-green-600">-{product.popust}%</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {product.masa ? `${product.masa} kg` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.zaloga > 0 ? 'default' : 'destructive'}>
+                        {product.zaloga} kos
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={
+                          product.status === 'novo' ? 'default' :
+                          product.status === 'znizano' ? 'secondary' : 'destructive'
+                        }
                       >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(product.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        {product.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={product.na_voljo}
+                        onCheckedChange={(checked) => handleToggleAvailability(product.id, checked)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(product)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(product.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
@@ -772,7 +793,7 @@ export default function AdminProducts() {
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Uredi izdelek</DialogTitle>
           </DialogHeader>

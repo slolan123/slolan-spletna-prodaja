@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingCart } from 'lucide-react';
@@ -19,6 +20,7 @@ interface Product {
   cena: number;
   popust?: number;
   slika_url?: string;
+  slike_urls?: string[];
   status: 'novo' | 'znizano' | 'prodano';
   zaloga: number;
   na_voljo: boolean;
@@ -71,6 +73,17 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const isOutOfStock = !product.na_voljo || product.zaloga === 0;
   const inWishlist = isInWishlist(product.id);
 
+  // Get the display image - prioritize slike_urls over slika_url
+  const displayImage = React.useMemo(() => {
+    if (product.slike_urls && product.slike_urls.length > 0) {
+      return product.slike_urls[0];
+    }
+    return product.slika_url || '/placeholder.svg';
+  }, [product.slike_urls, product.slika_url]);
+
+  // Check if there are multiple images
+  const hasMultipleImages = product.slike_urls && product.slike_urls.length > 1;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -84,7 +97,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <Link to={productLink}>
             <div className="aspect-square overflow-hidden rounded-t-lg">
               <img
-                src={product.slika_url || '/placeholder.svg'}
+                src={displayImage}
                 alt={getLocalizedName()}
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
               />
@@ -93,6 +106,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <div className="absolute top-2 left-2">
             {getStatusBadge()}
           </div>
+          
+          {/* Multiple images indicator */}
+          {hasMultipleImages && (
+            <div className="absolute top-2 right-10 bg-black/60 text-white text-xs px-2 py-1 rounded">
+              +{product.slike_urls!.length - 1}
+            </div>
+          )}
+          
           <Button
             variant="ghost"
             size="sm"

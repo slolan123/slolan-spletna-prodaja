@@ -16,43 +16,57 @@ serve(async (req) => {
 
   try {
     const { imageUrl, existingData } = await req.json();
+    
+    console.log('AI analysis request received');
+    console.log('Image URL:', imageUrl);
+    console.log('Existing data:', existingData);
 
     if (!openAIApiKey) {
+      console.error('OpenAI API key not found in environment');
       return new Response(
         JSON.stringify({ error: 'OpenAI API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Check if API key looks valid (should start with sk-)
+    if (!openAIApiKey.startsWith('sk-')) {
+      console.error('OpenAI API key format appears invalid');
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key format appears invalid' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create a prompt based on existing data and image
-    let prompt = `Analyze this product image and suggest values for empty fields. Here's what we know:`;
+    let prompt = `Analiziraj to sliko izdelka in predlagaj vrednosti za prazna polja. Tukaj je to, kar že vemo:`;
     
-    if (existingData.naziv) prompt += `\nProduct name: ${existingData.naziv}`;
-    if (existingData.koda) prompt += `\nProduct code: ${existingData.koda}`;
-    if (existingData.cena) prompt += `\nPrice: €${existingData.cena}`;
-    if (existingData.barva) prompt += `\nColor: ${existingData.barva}`;
-    if (existingData.opis) prompt += `\nDescription: ${existingData.opis}`;
+    if (existingData.naziv) prompt += `\nNaziv izdelka: ${existingData.naziv}`;
+    if (existingData.koda) prompt += `\nKoda izdelka: ${existingData.koda}`;
+    if (existingData.cena) prompt += `\nCena: €${existingData.cena}`;
+    if (existingData.barva) prompt += `\nBarva: ${existingData.barva}`;
+    if (existingData.opis) prompt += `\nOpis: ${existingData.opis}`;
 
-    prompt += `\n\nPlease analyze the image and provide suggestions for the following empty fields in Slovenian language:`;
-    if (!existingData.naziv) prompt += `\n- naziv (product name)`;
-    if (!existingData.barva) prompt += `\n- barva (color)`;
-    if (!existingData.opis) prompt += `\n- opis (description - max 200 characters)`;
-    if (!existingData.masa) prompt += `\n- masa (estimated weight in kg)`;
-    if (!existingData.seo_slug) prompt += `\n- seo_slug (URL-friendly slug)`;
+    prompt += `\n\nProsim analiziraj sliko in podaj predloge za naslednja prazna polja v slovenščini:`;
+    if (!existingData.naziv) prompt += `\n- naziv (ime izdelka)`;
+    if (!existingData.barva) prompt += `\n- barva (barva izdelka)`;
+    if (!existingData.opis) prompt += `\n- opis (kratek opis izdelka - največ 200 znakov)`;
+    if (!existingData.masa) prompt += `\n- masa (ocenjena teža v kg)`;
+    if (!existingData.seo_slug) prompt += `\n- seo_slug (URL-prijazna povezava)`;
 
-    prompt += `\n\nReturn ONLY a valid JSON object with suggested values for empty fields. Example format:
+    prompt += `\n\nVrni SAMO veljaven JSON objekt s predlaganimi vrednostmi za prazna polja. Primer formata:
 {
-  "naziv": "suggested name",
-  "barva": "suggested color",
-  "opis": "suggested description",
+  "naziv": "predlagani naziv",
+  "barva": "predlagana barva", 
+  "opis": "predlagan opis",
   "masa": "0.5",
-  "seo_slug": "suggested-slug"
+  "seo_slug": "predlagan-slug"
 }`;
 
     const messages = [
       { 
         role: 'system', 
-        content: 'You are a product analyst. Analyze product images and suggest appropriate field values in Slovenian language. Return only valid JSON.' 
+        content: 'Si strokovnjak za analizo izdelkov. Analiziraj slike izdelkov in predlagaj ustrezne vrednosti polj v slovenščini. Vrni samo veljaven JSON.' 
       },
       {
         role: 'user',
@@ -63,6 +77,8 @@ serve(async (req) => {
       }
     ];
 
+    console.log('Sending request to OpenAI API...');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -77,20 +93,53 @@ serve(async (req) => {
       }),
     });
 
+    console.log('OpenAI API response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, errorText);
+      
+      let errorMessage = `OpenAI API napaka: ${response.status}`;
+      if (response.status === 401) {
+        errorMessage = 'Napačen OpenAI API ključ. Preverite nastavitve v Supabase Secrets.';
+      } else if (response.status === 429) {
+        errorMessage = 'Preveč zahtev na OpenAI API. Poskusite kasneje.';
+      } else if (response.status === 400) {
+        errorMessage = 'Napačna zahteva na OpenAI API. Preverite sliko in podatke.';
+      }
+      
+      return new Response(
+        JSON.stringify({ error: errorMessage }),
+        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const data = await response.json();
+    console.log('OpenAI API response received');
+    
+    if (!data.choices || data.choices.length === 0) {
+      console.error('No choices in OpenAI response');
+      return new Response(
+        JSON.stringify({ error: 'Ni odgovora od OpenAI API' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const aiResponse = data.choices[0].message.content;
+    console.log('AI response content:', aiResponse);
 
     // Try to parse the JSON response
     let suggestions;
     try {
       suggestions = JSON.parse(aiResponse);
-    } catch {
-      // If parsing fails, return a fallback response
-      suggestions = { error: 'Could not parse AI response' };
+      console.log('Parsed suggestions:', suggestions);
+    } catch (parseError) {
+      console.error('Failed to parse AI response as JSON:', parseError);
+      console.error('Raw AI response:', aiResponse);
+      return new Response(
+        JSON.stringify({ error: 'Napaka pri razčlenjevanju AI odgovora' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     return new Response(JSON.stringify({ suggestions }), {
@@ -98,7 +147,9 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('Error in ai-product-analysis function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: `Napaka pri AI analizi: ${error.message}` 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

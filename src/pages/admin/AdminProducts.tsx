@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Package, Search, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
+import { WandSparkles as Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -72,6 +73,9 @@ const ProductForm = React.memo(({
   onCancel: () => void;
   isEdit?: boolean;
 }) => {
+  const { toast } = useToast();
+  const [aiLoading, setAiLoading] = useState(false);
+
   const handleInputChange = useCallback((field: keyof FormData, value: string | boolean | string[]) => {
     onFormDataChange({
       ...formData,
@@ -82,6 +86,81 @@ const ProductForm = React.memo(({
   const handleImagesChange = useCallback((urls: string[]) => {
     handleInputChange('slike_urls', urls);
   }, [handleInputChange]);
+
+  const handleAiFill = async () => {
+    if (formData.slike_urls.length === 0) {
+      toast({
+        title: "Napaka",
+        description: "Najprej naložite sliko, da lahko AI analizira produkt.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAiLoading(true);
+    
+    try {
+      const response = await supabase.functions.invoke('ai-product-analysis', {
+        body: {
+          imageUrl: formData.slike_urls[0],
+          existingData: {
+            naziv: formData.naziv,
+            koda: formData.koda,
+            cena: formData.cena,
+            barva: formData.barva,
+            opis: formData.opis,
+            masa: formData.masa,
+            seo_slug: formData.seo_slug,
+          }
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const { suggestions } = response.data;
+      
+      if (suggestions.error) {
+        throw new Error(suggestions.error);
+      }
+
+      // Only fill empty fields
+      const updatedFormData = { ...formData };
+      
+      if (!formData.naziv && suggestions.naziv) {
+        updatedFormData.naziv = suggestions.naziv;
+      }
+      if (!formData.barva && suggestions.barva) {
+        updatedFormData.barva = suggestions.barva;
+      }
+      if (!formData.opis && suggestions.opis) {
+        updatedFormData.opis = suggestions.opis;
+      }
+      if (!formData.masa && suggestions.masa) {
+        updatedFormData.masa = suggestions.masa;
+      }
+      if (!formData.seo_slug && suggestions.seo_slug) {
+        updatedFormData.seo_slug = suggestions.seo_slug;
+      }
+
+      onFormDataChange(updatedFormData);
+      
+      toast({
+        title: "AI analiza končana",
+        description: "Prazna polja so bila izpolnjena z AI predlogi.",
+      });
+    } catch (error) {
+      console.error('AI fill error:', error);
+      toast({
+        title: "Napaka",
+        description: `Napaka pri AI analizi: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -216,7 +295,31 @@ const ProductForm = React.memo(({
       </div>
 
       <div>
-        <label className="text-sm font-medium mb-2 block">Slike izdelka</label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium">Slike izdelka</label>
+          {formData.slike_urls.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAiFill}
+              disabled={aiLoading}
+              className="ml-2"
+            >
+              {aiLoading ? (
+                <>
+                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
+                  AI analizira...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  AI Fill
+                </>
+              )}
+            </Button>
+          )}
+        </div>
         <MultiImageUpload
           value={formData.slike_urls}
           onChange={handleImagesChange}

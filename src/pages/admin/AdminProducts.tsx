@@ -100,6 +100,9 @@ const ProductForm = React.memo(({
     setAiLoading(true);
     
     try {
+      console.log('Starting AI analysis with image:', formData.slike_urls[0]);
+      console.log('Existing form data:', formData);
+      
       const response = await supabase.functions.invoke('ai-product-analysis', {
         body: {
           imageUrl: formData.slike_urls[0],
@@ -115,46 +118,74 @@ const ProductForm = React.memo(({
         }
       });
 
+      console.log('AI analysis response:', response);
+
       if (response.error) {
-        throw new Error(response.error.message);
+        console.error('Supabase function error:', response.error);
+        throw new Error(response.error.message || 'Neznana napaka pri klicanju AI funkcije');
+      }
+
+      if (!response.data) {
+        console.error('No data in response:', response);
+        throw new Error('Ni podatkov v odgovoru AI funkcije');
       }
 
       const { suggestions } = response.data;
       
+      if (!suggestions) {
+        console.error('No suggestions in response data:', response.data);
+        throw new Error('Ni predlogov v AI odgovoru');
+      }
+
       if (suggestions.error) {
+        console.error('Error in suggestions:', suggestions.error);
         throw new Error(suggestions.error);
       }
 
+      console.log('AI suggestions received:', suggestions);
+
       // Only fill empty fields
       const updatedFormData = { ...formData };
+      let fieldsUpdated = 0;
       
       if (!formData.naziv && suggestions.naziv) {
         updatedFormData.naziv = suggestions.naziv;
+        fieldsUpdated++;
       }
       if (!formData.barva && suggestions.barva) {
         updatedFormData.barva = suggestions.barva;
+        fieldsUpdated++;
       }
       if (!formData.opis && suggestions.opis) {
         updatedFormData.opis = suggestions.opis;
+        fieldsUpdated++;
       }
       if (!formData.masa && suggestions.masa) {
         updatedFormData.masa = suggestions.masa;
+        fieldsUpdated++;
       }
       if (!formData.seo_slug && suggestions.seo_slug) {
         updatedFormData.seo_slug = suggestions.seo_slug;
+        fieldsUpdated++;
       }
 
-      onFormDataChange(updatedFormData);
-      
-      toast({
-        title: "AI analiza končana",
-        description: "Prazna polja so bila izpolnjena z AI predlogi.",
-      });
+      if (fieldsUpdated === 0) {
+        toast({
+          title: "AI analiza končana",
+          description: "Vsa polja so že izpolnjena. AI ni dodal novih predlogov.",
+        });
+      } else {
+        onFormDataChange(updatedFormData);
+        toast({
+          title: "AI analiza končana",
+          description: `${fieldsUpdated} polj je bilo izpolnjenih z AI predlogi.`,
+        });
+      }
     } catch (error) {
       console.error('AI fill error:', error);
       toast({
-        title: "Napaka",
-        description: `Napaka pri AI analizi: ${error.message}`,
+        title: "Napaka pri AI analizi",
+        description: error.message || 'Neznana napaka pri AI analizi',
         variant: "destructive",
       });
     } finally {

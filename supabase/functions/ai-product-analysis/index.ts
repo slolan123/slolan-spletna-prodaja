@@ -2,8 +2,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -21,22 +19,43 @@ serve(async (req) => {
     console.log('Image URL:', imageUrl);
     console.log('Existing data:', existingData);
 
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    console.log('Environment check:');
+    console.log('OPENAI_API_KEY exists:', !!openAIApiKey);
+    console.log('OPENAI_API_KEY length:', openAIApiKey ? openAIApiKey.length : 0);
+    console.log('OPENAI_API_KEY starts with sk-:', openAIApiKey ? openAIApiKey.startsWith('sk-') : false);
+
     if (!openAIApiKey) {
       console.error('OpenAI API key not found in environment');
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key not configured' }),
+        JSON.stringify({ error: 'OpenAI API ključ ni nastavljen v Supabase Secrets' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if API key looks valid (should start with sk-)
-    if (!openAIApiKey.startsWith('sk-')) {
-      console.error('OpenAI API key format appears invalid');
+    // Test API key validity with a simple request first
+    console.log('Testing API key validity...');
+    const testResponse = await fetch('https://api.openai.com/v1/models', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('API key test response status:', testResponse.status);
+    
+    if (!testResponse.ok) {
+      const errorText = await testResponse.text();
+      console.error('API key test failed:', errorText);
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key format appears invalid' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'OpenAI API ključ je neveljaven. Preverite nastavitve.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('API key is valid, proceeding with image analysis...');
 
     // Create a prompt based on existing data and image
     let prompt = `Analiziraj to sliko izdelka in predlagaj vrednosti za prazna polja. Tukaj je to, kar že vemo:`;
@@ -77,7 +96,7 @@ serve(async (req) => {
       }
     ];
 
-    console.log('Sending request to OpenAI API...');
+    console.log('Sending request to OpenAI API with model gpt-4o-mini...');
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -116,6 +135,7 @@ serve(async (req) => {
 
     const data = await response.json();
     console.log('OpenAI API response received');
+    console.log('Response data:', JSON.stringify(data, null, 2));
     
     if (!data.choices || data.choices.length === 0) {
       console.error('No choices in OpenAI response');
@@ -136,17 +156,35 @@ serve(async (req) => {
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
       console.error('Raw AI response:', aiResponse);
-      return new Response(
-        JSON.stringify({ error: 'Napaka pri razčlenjevanju AI odgovora' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      
+      // Try to extract JSON from the response if it's wrapped in text
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          suggestions = JSON.parse(jsonMatch[0]);
+          console.log('Extracted and parsed suggestions:', suggestions);
+        } catch (extractError) {
+          console.error('Failed to extract JSON:', extractError);
+          return new Response(
+            JSON.stringify({ error: 'Napaka pri razčlenjevanju AI odgovora' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'AI odgovor ni v JSON formatu' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
+    console.log('Returning successful response with suggestions');
     return new Response(JSON.stringify({ suggestions }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in ai-product-analysis function:', error);
+    console.error('Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: `Napaka pri AI analizi: ${error.message}` 
     }), {

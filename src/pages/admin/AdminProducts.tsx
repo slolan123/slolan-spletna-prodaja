@@ -436,6 +436,17 @@ export default function AdminProducts() {
 
       if (error) {
         console.error('Supabase error:', error);
+        
+        // Handle specific error cases
+        if (error.code === '23505' && error.message.includes('koda_key')) {
+          toast({
+            title: "Napaka",
+            description: "Izdelek s to kodo že obstaja. Prosim, uporabite drugo kodo.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
         throw error;
       }
 

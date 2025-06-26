@@ -27,19 +27,27 @@ export const MultiImageUpload = ({
   const uploadImage = async (file: File): Promise<string> => {
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}-${file.name}`;
     
+    console.log('Uploading file:', fileName);
+    
     const { data, error } = await supabase.storage
       .from('product-images')
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
 
     if (error) {
       console.error('Upload error:', error);
-      throw error;
+      throw new Error(`Upload failed: ${error.message}`);
     }
+
+    console.log('Upload successful:', data);
 
     const { data: urlData } = supabase.storage
       .from('product-images')
       .getPublicUrl(data.path);
 
+    console.log('Public URL:', urlData.publicUrl);
     return urlData.publicUrl;
   };
 
@@ -80,9 +88,11 @@ export const MultiImageUpload = ({
     setUploading(true);
 
     try {
+      console.log('Starting upload of', validFiles.length, 'files');
       const uploadPromises = validFiles.map(file => uploadImage(file));
       const newUrls = await Promise.all(uploadPromises);
       
+      console.log('All uploads completed:', newUrls);
       onChange([...value, ...newUrls]);
       
       toast({
@@ -93,7 +103,7 @@ export const MultiImageUpload = ({
       console.error('Error uploading images:', error);
       toast({
         title: "Napaka",
-        description: "Napaka pri nalaganju slik.",
+        description: `Napaka pri nalaganju slik: ${error.message || 'Neznana napaka'}`,
         variant: "destructive",
       });
     } finally {
@@ -111,23 +121,40 @@ export const MultiImageUpload = ({
 
   const removeImage = async (index: number) => {
     const imageUrl = value[index];
+    console.log('Removing image:', imageUrl);
     
     // Try to delete from storage if it's a Supabase URL
-    if (imageUrl.includes('supabase')) {
+    if (imageUrl.includes('supabase') || imageUrl.includes('product-images')) {
       try {
-        const path = imageUrl.split('/').pop();
-        if (path) {
-          await supabase.storage
-            .from('product-images')
-            .remove([path]);
+        // Extract the file path from the URL
+        const urlParts = imageUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        
+        console.log('Attempting to delete file:', fileName);
+        
+        const { error } = await supabase.storage
+          .from('product-images')
+          .remove([fileName]);
+          
+        if (error) {
+          console.error('Error deleting from storage:', error);
+          // Continue anyway, as the file might already be deleted
+        } else {
+          console.log('File deleted from storage successfully');
         }
       } catch (error) {
         console.error('Error deleting image from storage:', error);
+        // Continue anyway
       }
     }
 
     const newUrls = value.filter((_, i) => i !== index);
     onChange(newUrls);
+    
+    toast({
+      title: "Slika odstranjena",
+      description: "Slika je bila uspešno odstranjena.",
+    });
   };
 
   const reorderImages = (fromIndex: number, toIndex: number) => {
@@ -144,13 +171,17 @@ export const MultiImageUpload = ({
         {value.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {value.map((imageUrl, index) => (
-              <Card key={index} className="relative group">
+              <Card key={`${imageUrl}-${index}`} className="relative group">
                 <CardContent className="p-2">
                   <div className="relative aspect-square">
                     <img
                       src={imageUrl}
                       alt={`Slika ${index + 1}`}
                       className="w-full h-full object-cover rounded"
+                      onError={(e) => {
+                        console.error('Image load error:', imageUrl);
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
                     />
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded flex items-center justify-center">
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">

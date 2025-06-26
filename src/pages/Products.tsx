@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -74,11 +75,13 @@ export default function Products() {
     }
   }, [searchParams]);
 
-  // Load products when filters change
+  // Load products when filters change - reset products and start fresh
   useEffect(() => {
+    console.log('Filters changed, reloading products...');
+    setProducts([]); // Clear existing products
     setPage(0);
     setHasMore(true);
-    loadProducts(true);
+    loadProducts(0, true); // Load from page 0 and reset
   }, [searchTerm, selectedCategory, selectedStatus, selectedColor, minPrice, maxPrice]);
 
   const loadCategoriesAndColors = async () => {
@@ -91,10 +94,11 @@ export default function Products() {
       if (categoriesError) throw categoriesError;
       setCategories(categoriesData || []);
 
-      // Load unique colors
+      // Load unique colors from available products only
       const { data: colorsData, error: colorsError } = await supabase
         .from('predmeti')
         .select('barva')
+        .eq('na_voljo', true)
         .not('barva', 'is', null);
 
       if (colorsError) throw colorsError;
@@ -108,18 +112,19 @@ export default function Products() {
     }
   };
 
-  const loadProducts = async (reset = false) => {
+  const loadProducts = async (currentPage: number = page, reset: boolean = false) => {
     try {
       setLoading(true);
       
-      const currentPage = reset ? 0 : page;
       const from = currentPage * PRODUCTS_PER_PAGE;
       const to = from + PRODUCTS_PER_PAGE - 1;
+
+      console.log(`Loading products from ${from} to ${to}, page: ${currentPage}`);
 
       let query = supabase
         .from('predmeti')
         .select('*')
-        .eq('na_voljo', true)
+        .eq('na_voljo', true) // Only show available products
         .range(from, to)
         .order('created_at', { ascending: false });
 
@@ -152,16 +157,24 @@ export default function Products() {
 
       if (error) throw error;
 
+      console.log(`Loaded ${data?.length || 0} products`);
+
       if (reset) {
         setProducts(data || []);
       } else {
-        setProducts(prev => [...prev, ...(data || [])]);
+        setProducts(prev => {
+          // Prevent duplicates by filtering out products that already exist
+          const existingIds = new Set(prev.map(p => p.id));
+          const newProducts = (data || []).filter(p => !existingIds.has(p.id));
+          console.log(`Adding ${newProducts.length} new products, ${prev.length} existing`);
+          return [...prev, ...newProducts];
+        });
       }
 
       setHasMore(data ? data.length === PRODUCTS_PER_PAGE : false);
       
       if (!reset) {
-        setPage(prev => prev + 1);
+        setPage(currentPage + 1);
       }
     } catch (error) {
       console.error('Error loading products:', error);
@@ -172,8 +185,8 @@ export default function Products() {
 
   const loadMore = () => {
     if (!loading && hasMore) {
-      setPage(prev => prev + 1);
-      loadProducts(false);
+      console.log('Loading more products...');
+      loadProducts(page, false);
     }
   };
 

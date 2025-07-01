@@ -63,8 +63,23 @@ export default function Checkout() {
         cena: item.cena,
         popust: item.popust,
         quantity: item.quantity,
-        final_price: item.cena * (1 - item.popust / 100),
+        final_price: item.cena * (1 - (item.popust || 0) / 100),
+        selected_variant: item.selectedVariant ? {
+          id: item.selectedVariant.id,
+          color_name: item.selectedVariant.color_name,
+          color_value: item.selectedVariant.color_value
+        } : null
       }));
+
+      // Prepare selected variants for the new column
+      const selectedVariants = items
+        .filter(item => item.selectedVariant)
+        .map(item => ({
+          product_id: item.id,
+          variant_id: item.selectedVariant!.id,
+          color_name: item.selectedVariant!.color_name,
+          quantity: item.quantity
+        }));
 
       const { data, error } = await supabase
         .from('narocila')
@@ -76,6 +91,7 @@ export default function Checkout() {
           naslov_dostave: formData.naslov_dostave,
           telefon_kontakt: formData.telefon_kontakt,
           opombe: formData.opombe || null,
+          selected_variants: selectedVariants
         })
         .select()
         .single();
@@ -104,6 +120,18 @@ export default function Checkout() {
 
   const getFinalPrice = (price: number, discount: number) => {
     return price * (1 - discount / 100);
+  };
+
+  const getItemDisplayImage = (item: any) => {
+    // Use variant images if available
+    if (item.selectedVariant && item.selectedVariant.images.length > 0) {
+      return item.selectedVariant.images[0];
+    }
+    // Fallback to product images
+    if (item.slike_urls && item.slike_urls.length > 0) {
+      return item.slike_urls[0];
+    }
+    return item.slika_url || '/placeholder.svg';
   };
 
   if (items.length === 0) {
@@ -229,23 +257,36 @@ export default function Checkout() {
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   {items.map(item => (
-                    <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-xl">
+                    <div key={`${item.id}-${item.selectedVariant?.id || 'default'}`} className="flex gap-4 p-4 bg-gray-50 rounded-xl">
                       <div className="w-16 h-16 rounded-lg overflow-hidden bg-white flex-shrink-0">
                         <img
-                          src={item.slika_url || '/placeholder.svg'}
+                          src={getItemDisplayImage(item)}
                           alt={item.naziv}
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-1">
                         <h4 className="font-bold text-gray-900">{item.naziv}</h4>
+                        {item.selectedVariant && (
+                          <div className="flex items-center gap-2 mt-1">
+                            {item.selectedVariant.color_value && (
+                              <div 
+                                className="w-3 h-3 rounded-full border border-gray-300"
+                                style={{ backgroundColor: item.selectedVariant.color_value }}
+                              />
+                            )}
+                            <span className="text-sm text-gray-600 capitalize">
+                              {item.selectedVariant.color_name}
+                            </span>
+                          </div>
+                        )}
                         <p className="text-sm text-gray-600">
-                          {item.quantity}x €{getFinalPrice(item.cena, item.popust).toFixed(2)}
+                          {item.quantity}x €{getFinalPrice(item.cena, item.popust || 0).toFixed(2)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-gray-900">
-                          €{(getFinalPrice(item.cena, item.popust) * item.quantity).toFixed(2)}
+                          €{(getFinalPrice(item.cena, item.popust || 0) * item.quantity).toFixed(2)}
                         </p>
                       </div>
                     </div>

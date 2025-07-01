@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -17,6 +18,7 @@ interface Order {
   naslov_dostave: string;
   telefon_kontakt: string;
   opombe?: string;
+  selected_variants?: any[];
 }
 
 export default function Orders() {
@@ -67,6 +69,15 @@ export default function Orders() {
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  // Helper function to get selected variant info for an item
+  const getVariantInfo = (artikel: any, order: Order) => {
+    if (!order.selected_variants) return null;
+    
+    return order.selected_variants.find(variant => 
+      variant.product_id === artikel.id
+    );
   };
 
   if (loading) {
@@ -158,19 +169,37 @@ export default function Orders() {
                   <div>
                     <h4 className="font-semibold mb-2">Artikli ({order.artikli.length})</h4>
                     <div className="space-y-2">
-                      {order.artikli.map((artikel: any, index: number) => (
-                        <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                          <div>
-                            <span className="font-medium">{artikel.naziv}</span>
-                            <span className="text-muted-foreground ml-2">
-                              x{artikel.kolicina}
+                      {order.artikli.map((artikel: any, index: number) => {
+                        const variantInfo = getVariantInfo(artikel, order);
+                        return (
+                          <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{artikel.naziv}</span>
+                                <span className="text-muted-foreground">
+                                  x{artikel.quantity}
+                                </span>
+                              </div>
+                              {variantInfo && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  {artikel.selected_variant?.color_value && (
+                                    <div 
+                                      className="w-3 h-3 rounded-full border border-gray-300"
+                                      style={{ backgroundColor: artikel.selected_variant.color_value }}
+                                    />
+                                  )}
+                                  <span className="text-xs text-muted-foreground capitalize">
+                                    Barva: {variantInfo.color_name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <span className="font-semibold">
+                              €{(artikel.final_price * artikel.quantity).toFixed(2)}
                             </span>
                           </div>
-                          <span className="font-semibold">
-                            €{(artikel.cena * artikel.kolicina).toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 

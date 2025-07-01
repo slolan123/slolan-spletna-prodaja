@@ -153,6 +153,7 @@ export type Database = {
           id: string
           naslov_dostave: string
           opombe: string | null
+          selected_variants: Json | null
           skupna_cena: number
           status: Database["public"]["Enums"]["narocilo_status"]
           telefon_kontakt: string
@@ -165,6 +166,7 @@ export type Database = {
           id?: string
           naslov_dostave: string
           opombe?: string | null
+          selected_variants?: Json | null
           skupna_cena: number
           status?: Database["public"]["Enums"]["narocilo_status"]
           telefon_kontakt: string
@@ -177,6 +179,7 @@ export type Database = {
           id?: string
           naslov_dostave?: string
           opombe?: string | null
+          selected_variants?: Json | null
           skupna_cena?: number
           status?: Database["public"]["Enums"]["narocilo_status"]
           telefon_kontakt?: string
@@ -320,6 +323,50 @@ export type Database = {
             columns: ["kategorija_id"]
             isOneToOne: false
             referencedRelation: "kategorije"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variants: {
+        Row: {
+          available: boolean
+          color_name: string
+          color_value: string | null
+          created_at: string
+          id: string
+          images: string[] | null
+          product_id: string
+          stock: number
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          color_name: string
+          color_value?: string | null
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          product_id: string
+          stock?: number
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          color_name?: string
+          color_value?: string | null
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          product_id?: string
+          stock?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "predmeti"
             referencedColumns: ["id"]
           },
         ]

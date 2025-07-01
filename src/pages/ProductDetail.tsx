@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Heart, ShoppingCart, Share2, Package, Truck, ChevronLeft, ChevronRight, Star, Eye, Shield, Clock } from 'lucide-react';
+import { ArrowLeft, Heart, ShoppingCart, Share2, Package, Truck, ChevronLeft, ChevronRight, Star, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { ProductReviews } from '@/components/products/ProductReviews';
+import { ColorVariantSelector } from '@/components/products/ColorVariantSelector';
 
 interface Product {
   id: string;
@@ -40,6 +40,15 @@ interface Product {
   kategorija_id?: string;
 }
 
+interface ColorVariant {
+  id: string;
+  color_name: string;
+  color_value?: string;
+  images: string[];
+  stock: number;
+  available: boolean;
+}
+
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -49,6 +58,8 @@ export default function ProductDetail() {
   const { isInWishlist, toggleWishlist } = useWishlist();
   
   const [product, setProduct] = useState<Product | null>(null);
+  const [colorVariants, setColorVariants] = useState<ColorVariant[]>([]);
+  const [selectedVariant, setSelectedVariant] = useState<ColorVariant | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [imageLoading, setImageLoading] = useState(true);
@@ -86,11 +97,38 @@ export default function ProductDetail() {
       }
 
       setProduct(data);
+      
+      // Load color variants
+      await loadColorVariants(data.id);
     } catch (error) {
       console.error('Error loading product:', error);
       navigate('/404');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadColorVariants = async (productId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', productId)
+        .eq('available', true)
+        .order('color_name');
+
+      if (error) throw error;
+      
+      const variants = data || [];
+      setColorVariants(variants);
+      
+      // Auto-select first available variant
+      if (variants.length > 0) {
+        const firstAvailable = variants.find(v => v.stock > 0) || variants[0];
+        setSelectedVariant(firstAvailable);
+      }
+    } catch (error) {
+      console.error('Error loading color variants:', error);
     }
   };
 
@@ -156,10 +194,14 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (product) {
-      addToCart(product);
+      const cartItem = {
+        ...product,
+        selectedVariant: selectedVariant || undefined
+      };
+      addToCart(cartItem);
       toast({
         title: t('cart.addedToCart'),
-        description: `${getLocalizedName()} je bil dodan v košarico.`,
+        description: `${getLocalizedName()}${selectedVariant ? ` (${selectedVariant.color_name})` : ''} je bil dodan v košarico.`,
       });
     }
   };
@@ -190,14 +232,17 @@ export default function ProductDetail() {
     }
   };
 
+  // Use variant images if available, otherwise fallback to product images
   const images = React.useMemo(() => {
-    if (product?.slike_urls && product.slike_urls.length > 0) {
+    if (selectedVariant && selectedVariant.images.length > 0) {
+      return selectedVariant.images;
+    } else if (product?.slike_urls && product.slike_urls.length > 0) {
       return product.slike_urls;
     } else if (product?.slika_url) {
       return [product.slika_url];
     }
     return ['/placeholder.svg'];
-  }, [product]);
+  }, [product, selectedVariant]);
 
   const nextImage = () => {
     setSelectedImage((prev) => (prev + 1) % images.length);
@@ -207,7 +252,9 @@ export default function ProductDetail() {
     setSelectedImage((prev) => (prev - 1 + images.length) % images.length);
   };
 
-  const isOutOfStock = !product?.na_voljo || product?.zaloga === 0;
+  // Use variant stock if available
+  const currentStock = selectedVariant ? selectedVariant.stock : (product?.zaloga || 0);
+  const isOutOfStock = !product?.na_voljo || currentStock === 0;
   const inWishlist = product ? isInWishlist(product.id) : false;
 
   if (loading) {
@@ -417,13 +464,13 @@ export default function ProductDetail() {
               </div>
             </motion.div>
 
-            {/* Product Info Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Product Info Cards - Removed warranty card */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Card className="border-gray-200 hover:shadow-md transition-shadow">
                 <CardContent className="p-4 text-center space-y-2">
                   <Package className="h-6 w-6 text-primary mx-auto" />
                   <div className="text-sm font-medium text-gray-900">
-                    Zaloga: {product.zaloga}
+                    Zaloga: {currentStock}
                   </div>
                   <div className="text-xs text-gray-600">kosov na zalogi</div>
                 </CardContent>
@@ -436,18 +483,22 @@ export default function ProductDetail() {
                   <div className="text-xs text-gray-600">Brezplačno nad €50</div>
                 </CardContent>
               </Card>
-              
-              <Card className="border-gray-200 hover:shadow-md transition-shadow">
-                <CardContent className="p-4 text-center space-y-2">
-                  <Shield className="h-6 w-6 text-primary mx-auto" />
-                  <div className="text-sm font-medium text-gray-900">Garancija</div>
-                  <div className="text-xs text-gray-600">2 leti</div>
-                </CardContent>
-              </Card>
             </div>
 
-            {/* Color */}
-            {product.barva && (
+            {/* Color Variant Selector */}
+            {colorVariants.length > 0 && (
+              <ColorVariantSelector
+                variants={colorVariants}
+                selectedVariant={selectedVariant}
+                onVariantSelect={(variant) => {
+                  setSelectedVariant(variant);
+                  setSelectedImage(0); // Reset to first image when changing variant
+                }}
+              />
+            )}
+
+            {/* Color (fallback for products without variants) */}
+            {colorVariants.length === 0 && product.barva && (
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-gray-900">Barva</h3>
                 <div className="flex items-center gap-3">

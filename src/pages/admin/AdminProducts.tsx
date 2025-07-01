@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Package, Search, Plus, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Package, Search, Plus, Edit, Trash2, Eye, EyeOff, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MultiImageUpload } from '@/components/admin/MultiImageUpload';
+import { ProductVariantManager } from '@/components/admin/ProductVariantManager';
 
 interface Product {
   id: string;
@@ -198,11 +199,11 @@ const ProductForm = React.memo(({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium">Barva</label>
+          <label className="text-sm font-medium">Barva (osnovna)</label>
           <Input
             value={formData.barva}
             onChange={(e) => handleInputChange('barva', e.target.value)}
-            placeholder="Barva izdelka"
+            placeholder="Barva izdelka (če ni barvnih različic)"
             autoComplete="off"
           />
         </div>
@@ -218,7 +219,10 @@ const ProductForm = React.memo(({
       </div>
 
       <div>
-        <label className="text-sm font-medium">Slike izdelka</label>
+        <label className="text-sm font-medium">Slike izdelka (osnovno)</label>
+        <p className="text-xs text-gray-500 mb-2">
+          Te slike se uporabljajo, če niso dodane barvne različice z lastnimi slikami
+        </p>
         <MultiImageUpload
           value={formData.slike_urls}
           onChange={handleImagesChange}
@@ -274,6 +278,7 @@ export default function AdminProducts() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [variantDialogOpen, setVariantDialogOpen] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     naziv: '',
@@ -589,6 +594,11 @@ export default function AdminProducts() {
     setEditDialogOpen(true);
   };
 
+  const openVariantDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setVariantDialogOpen(true);
+  };
+
   const handleFormDataChange = useCallback((newFormData: FormData) => {
     setFormData(newFormData);
   }, []);
@@ -783,6 +793,14 @@ export default function AdminProducts() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => openVariantDialog(product)}
+                          title="Upravljaj barvne različice"
+                        >
+                          <Palette className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => openEditDialog(product)}
                         >
                           <Edit className="h-4 w-4" />
@@ -818,6 +836,25 @@ export default function AdminProducts() {
             onCancel={handleEditCancel}
             isEdit={true}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Variant Management Dialog */}
+      <Dialog open={variantDialogOpen} onOpenChange={setVariantDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Upravljanje barvnih različic - {selectedProduct?.naziv}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <ProductVariantManager 
+              productId={selectedProduct.id}
+              onVariantsChange={() => {
+                // Optionally refresh products list if needed
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
@@ -6,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 
 export const CartIcon = () => {
-  const { getItemCount } = useCart();
-  const itemCount = getItemCount();
+  const { getTotalItems } = useCart();
+  const itemCount = getTotalItems();
 
   return (
     <Link to="/cart">

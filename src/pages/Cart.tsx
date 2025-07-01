@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2 } from 'lucide-react';
@@ -70,7 +71,7 @@ export default function Cart() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{item.naziv}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {t('products.productCode')}: {item.koda}
+                        Koda: {item.koda}
                       </p>
                       
                       <div className="flex items-center gap-2 mt-2">

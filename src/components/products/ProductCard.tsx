@@ -151,7 +151,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            {t('products.productCode')}: {product.koda}
+            Koda: {product.koda}
           </p>
         </CardContent>
 

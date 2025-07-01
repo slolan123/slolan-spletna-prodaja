@@ -56,7 +56,6 @@ export default function Checkout() {
     setLoading(true);
 
     try {
-      // Prepare order items
       const artikli = items.map(item => ({
         id: item.id,
         naziv: item.naziv,
@@ -67,7 +66,6 @@ export default function Checkout() {
         final_price: item.cena * (1 - item.popust / 100),
       }));
 
-      // Create order
       const { data, error } = await supabase
         .from('narocila')
         .insert({
@@ -84,7 +82,6 @@ export default function Checkout() {
 
       if (error) throw error;
 
-      // Clear cart
       clearCart();
 
       toast({
@@ -111,155 +108,173 @@ export default function Checkout() {
 
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-12"
-        >
-          <h1 className="text-3xl font-bold mb-4">{t('checkout.title')}</h1>
-          <p className="text-muted-foreground">
-            Košarica je prazna. Dodajte izdelke pred oddajo naročila.
-          </p>
-        </motion.div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="container mx-auto px-4 py-16">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16 space-y-8"
+          >
+            <h1 className="text-4xl font-bold text-gray-900">{t('checkout.title')}</h1>
+            <p className="text-xl text-gray-600">
+              Košarica je prazna. Dodajte izdelke pred oddajo naročila.
+            </p>
+            <Button asChild size="lg" className="rounded-xl">
+              <Link to="/products">
+                Pojdite na izdelke
+              </Link>
+            </Button>
+          </motion.div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <motion.h1 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl font-bold mb-8"
-      >
-        {t('checkout.title')}
-      </motion.h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Checkout Form */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto px-4 py-8">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-4xl font-bold mb-12 text-gray-900"
         >
-          <Card>
-            <CardHeader>
-              <CardTitle>Podatki za dostavo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="naslov_dostave">
-                    {t('checkout.deliveryAddress')} *
-                  </Label>
-                  <Input
-                    id="naslov_dostave"
-                    name="naslov_dostave"
-                    value={formData.naslov_dostave}
-                    onChange={handleInputChange}
-                    placeholder="Vnesite naslov za dostavo"
-                    required
-                  />
-                </div>
+          {t('checkout.title')}
+        </motion.h1>
 
-                <div className="space-y-2">
-                  <Label htmlFor="telefon_kontakt">
-                    {t('checkout.phoneNumber')} *
-                  </Label>
-                  <Input
-                    id="telefon_kontakt"
-                    name="telefon_kontakt"
-                    type="tel"
-                    value={formData.telefon_kontakt}
-                    onChange={handleInputChange}
-                    placeholder="Vnesite telefonsko številko"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="opombe">
-                    {t('checkout.notes')}
-                  </Label>
-                  <Textarea
-                    id="opombe"
-                    name="opombe"
-                    value={formData.opombe}
-                    onChange={handleInputChange}
-                    placeholder="Dodatne opombe za dostavo (neobvezno)"
-                    rows={3}
-                  />
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  size="lg"
-                  disabled={loading}
-                >
-                  {loading ? t('common.loading') : t('checkout.placeOrder')}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Order Summary */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="sticky top-4">
-            <CardHeader>
-              <CardTitle>Povzetek naročila</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {items.map(item => (
-                  <div key={item.id} className="flex gap-3">
-                    <img
-                      src={item.slika_url || '/placeholder.svg'}
-                      alt={item.naziv}
-                      className="w-12 h-12 object-cover rounded"
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Checkout Form */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <Card className="shadow-xl border-0 rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold text-gray-900">
+                  Podatki za dostavo
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="naslov_dostave" className="text-lg font-semibold text-gray-900">
+                      {t('checkout.deliveryAddress')} *
+                    </Label>
+                    <Input
+                      id="naslov_dostave"
+                      name="naslov_dostave"
+                      value={formData.naslov_dostave}
+                      onChange={handleInputChange}
+                      placeholder="Vnesite polni naslov za dostavo"
+                      required
+                      className="h-12 rounded-xl border-2 focus:border-primary"
                     />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">{item.naziv}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        {item.quantity}x €{getFinalPrice(item.cena, item.popust).toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">
-                        €{(getFinalPrice(item.cena, item.popust) * item.quantity).toFixed(2)}
-                      </p>
-                    </div>
                   </div>
-                ))}
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Skupaj</span>
-                  <span>€{getTotalPrice().toFixed(2)}</span>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="telefon_kontakt" className="text-lg font-semibold text-gray-900">
+                      {t('checkout.phoneNumber')} *
+                    </Label>
+                    <Input
+                      id="telefon_kontakt"
+                      name="telefon_kontakt"
+                      type="tel"
+                      value={formData.telefon_kontakt}
+                      onChange={handleInputChange}
+                      placeholder="Vaša telefonska številka"
+                      required
+                      className="h-12 rounded-xl border-2 focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="opombe" className="text-lg font-semibold text-gray-900">
+                      {t('checkout.notes')}
+                    </Label>
+                    <Textarea
+                      id="opombe"
+                      name="opombe"
+                      value={formData.opombe}
+                      onChange={handleInputChange}
+                      placeholder="Dodatne opombe za dostavo (neobvezno)"
+                      rows={4}
+                      className="rounded-xl border-2 focus:border-primary resize-none"
+                    />
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300" 
+                    size="lg"
+                    disabled={loading}
+                  >
+                    {loading ? t('common.loading') : t('checkout.placeOrder')}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Order Summary */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Card className="sticky top-4 shadow-xl border-0 rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold text-gray-900">
+                  Povzetek naročila
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  {items.map(item => (
+                    <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-xl">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-white flex-shrink-0">
+                        <img
+                          src={item.slika_url || '/placeholder.svg'}
+                          alt={item.naziv}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-gray-900">{item.naziv}</h4>
+                        <p className="text-sm text-gray-600">
+                          {item.quantity}x €{getFinalPrice(item.cena, item.popust).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-900">
+                          €{(getFinalPrice(item.cena, item.popust) * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between">
-                  <span>Dostava</span>
-                  <span className="text-muted-foreground">Brezplačno</span>
+                
+                <Separator />
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between text-lg">
+                    <span className="text-gray-700">Skupaj</span>
+                    <span className="font-semibold text-gray-900">€{getTotalPrice().toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg">
+                    <span className="text-gray-700">Dostava</span>
+                    <span className="text-green-600 font-semibold">Brezplačno</span>
+                  </div>
                 </div>
-              </div>
-              
-              <Separator />
-              
-              <div className="flex justify-between font-bold text-lg">
-                <span>{t('checkout.orderTotal')}</span>
-                <span>€{getTotalPrice().toFixed(2)}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+                
+                <Separator />
+                
+                <div className="flex justify-between font-bold text-2xl">
+                  <span className="text-gray-900">{t('checkout.orderTotal')}</span>
+                  <span className="text-primary">€{getTotalPrice().toFixed(2)}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
       </div>
     </div>
   );

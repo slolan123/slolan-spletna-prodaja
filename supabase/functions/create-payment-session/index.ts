@@ -21,7 +21,8 @@ interface PaymentOrder {
 // Mock Nexi payment session creation - SAFEGUARD: No product deletion logic here
 const createMockNexiSession = async (order: PaymentOrder) => {
   const sessionId = `mock_session_${Date.now()}`;
-  const redirectUrl = `https://fake-nexi-redirect.com/checkout/${sessionId}`;
+  // Always return a valid redirect URL for testing
+  const redirectUrl = `/payment-success?session=${sessionId}&order=${order.id}`;
   
   // Log the "API call" with environment variables
   console.log('Mock Nexi API Call:', {
@@ -30,7 +31,8 @@ const createMockNexiSession = async (order: PaymentOrder) => {
     order: order,
     successUrl: Deno.env.get('NEXI_SUCCESS_URL'),
     cancelUrl: Deno.env.get('NEXI_CANCEL_URL'),
-    callbackUrl: Deno.env.get('NEXI_CALLBACK_URL')
+    callbackUrl: Deno.env.get('NEXI_CALLBACK_URL'),
+    generatedRedirectUrl: redirectUrl
   });
   
   return {
@@ -71,6 +73,7 @@ serve(async (req) => {
       .single()
 
     if (orderError && orderError.code !== 'PGRST116') {
+      console.error('Order fetch error:', orderError);
       throw orderError
     }
 
@@ -119,7 +122,7 @@ serve(async (req) => {
       }))
     };
 
-    // Create mock Nexi payment session
+    // Create mock Nexi payment session - always returns valid redirectUrl
     const paymentSession = await createMockNexiSession(paymentOrder);
 
     // Store session info in order for later verification - SAFEGUARD: Only update orders
@@ -128,7 +131,8 @@ serve(async (req) => {
       .update({ 
         opombe: JSON.stringify({ 
           payment_session_id: paymentSession.sessionId,
-          payment_provider: 'nexi_mock'
+          payment_provider: 'nexi_mock',
+          session_created_at: new Date().toISOString()
         })
       })
       .eq('id', order.id)
@@ -137,6 +141,8 @@ serve(async (req) => {
       console.error('Error updating order:', updateError);
       // Continue anyway, as payment session was created
     }
+
+    console.log('Payment session created successfully:', paymentSession);
 
     return new Response(
       JSON.stringify(paymentSession),
@@ -148,7 +154,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Payment session creation error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Payment session creation failed' }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

@@ -36,9 +36,11 @@ export class MockNexiProvider extends PaymentProvider {
       throw new Error('Invalid order data provided');
     }
 
-    // Mock Nexi session creation
+    // Mock Nexi session creation - always return valid redirect URL
     const sessionId = `mock_session_${Date.now()}`;
-    const redirectUrl = `https://fake-nexi-redirect.com/checkout/${sessionId}`;
+    
+    // For testing, redirect to our success page instead of external URL
+    const redirectUrl = '/payment-success';
     
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 500));

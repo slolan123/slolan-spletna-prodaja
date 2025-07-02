@@ -57,6 +57,7 @@ export default function Placilo() {
 
   const loadActiveOrder = async () => {
     try {
+      // SAFEGUARD: Only select orders, never delete products
       const { data, error } = await supabase
         .from('narocila')
         .select('*')
@@ -125,28 +126,39 @@ export default function Placilo() {
     setProcessing(true);
     
     try {
+      // SAFEGUARD: Only create payment session, never modify product data
       const { data, error } = await supabase.functions.invoke('create-payment-session', {
         body: { orderId: order.id }
       });
 
-      if (error) throw error;
-
-      if (data?.redirectUrl) {
-        toast({
-          title: 'Preusmerjanje na plačilo',
-          description: 'Preusmerjamo vas na varno plačilno stran...',
-        });
-        
-        // Simulate redirect delay
-        setTimeout(() => {
-          window.location.href = data.redirectUrl;
-        }, 1000);
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(`Payment session creation failed: ${error.message}`);
       }
+
+      // Enhanced safety check for redirect URL
+      if (!data?.redirectUrl) {
+        console.error('Missing redirect URL in response:', data);
+        throw new Error('Redirect URL is missing from payment session response');
+      }
+
+      console.log('Payment session created successfully:', data);
+      
+      toast({
+        title: 'Preusmerjanje na plačilo',
+        description: 'Preusmerjamo vas na varno plačilno stran...',
+      });
+      
+      // Simulate redirect delay and then redirect
+      setTimeout(() => {
+        window.location.href = data.redirectUrl;
+      }, 1000);
+
     } catch (error) {
       console.error('Payment initiation error:', error);
       toast({
         title: 'Napaka pri plačilu',
-        description: 'Prišlo je do napake pri inicializaciji plačila.',
+        description: error instanceof Error ? error.message : 'Prišlo je do napake pri inicializaciji plačila.',
         variant: 'destructive',
       });
     } finally {

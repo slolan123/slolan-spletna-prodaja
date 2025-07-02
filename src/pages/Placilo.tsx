@@ -11,16 +11,33 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+interface OrderItem {
+  naziv: string;
+  quantity: number;
+  final_price: number;
+  cena: number;
+  id?: string;
+  koda?: string;
+  popust?: number;
+  selected_variant?: {
+    id: string;
+    color_name: string;
+    color_value: string;
+  } | null;
+}
+
 interface Order {
   id: string;
   skupna_cena: number;
-  artikli: Array<{
-    naziv: string;
-    quantity: number;
-    final_price: number;
-    cena: number;
-  }>;
+  artikli: OrderItem[];
   status: string;
+  datum: string;
+  naslov_dostave: string;
+  telefon_kontakt: string;
+  opombe: string | null;
+  selected_variants?: any;
+  updated_at: string;
+  uporabnik_id: string;
 }
 
 export default function Placilo() {
@@ -54,7 +71,34 @@ export default function Placilo() {
       }
 
       if (data) {
-        setOrder(data);
+        // Parse JSON fields safely
+        let parsedArtikli: OrderItem[] = [];
+        try {
+          parsedArtikli = typeof data.artikli === 'string' 
+            ? JSON.parse(data.artikli) 
+            : Array.isArray(data.artikli) 
+            ? data.artikli 
+            : [];
+        } catch (parseError) {
+          console.error('Error parsing artikli:', parseError);
+          parsedArtikli = [];
+        }
+
+        const typedOrder: Order = {
+          id: data.id,
+          skupna_cena: data.skupna_cena,
+          artikli: parsedArtikli,
+          status: data.status,
+          datum: data.datum,
+          naslov_dostave: data.naslov_dostave,
+          telefon_kontakt: data.telefon_kontakt,
+          opombe: data.opombe,
+          selected_variants: data.selected_variants,
+          updated_at: data.updated_at,
+          uporabnik_id: data.uporabnik_id
+        };
+
+        setOrder(typedOrder);
       } else {
         toast({
           title: 'Ni aktivnega naročila',
@@ -127,7 +171,7 @@ export default function Placilo() {
     );
   }
 
-  if (!order) {
+  if (!order || !order.artikli || order.artikli.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="container mx-auto px-4 py-16 text-center">

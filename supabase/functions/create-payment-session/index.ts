@@ -18,7 +18,7 @@ interface PaymentOrder {
   }>;
 }
 
-// Mock Nexi payment session creation
+// Mock Nexi payment session creation - SAFEGUARD: No product deletion logic here
 const createMockNexiSession = async (order: PaymentOrder) => {
   const sessionId = `mock_session_${Date.now()}`;
   const redirectUrl = `https://fake-nexi-redirect.com/checkout/${sessionId}`;
@@ -60,7 +60,7 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Get or create active order for user
+    // Get or create active order for user - SAFEGUARD: Only select orders, never delete products
     let { data: order, error: orderError } = await supabaseClient
       .from('narocila')
       .select('*')
@@ -84,23 +84,46 @@ serve(async (req) => {
       )
     }
 
+    // Parse artikli safely
+    let artikliArray = [];
+    try {
+      artikliArray = typeof order.artikli === 'string' 
+        ? JSON.parse(order.artikli) 
+        : Array.isArray(order.artikli) 
+        ? order.artikli 
+        : [];
+    } catch (parseError) {
+      console.error('Error parsing artikli:', parseError);
+      artikliArray = [];
+    }
+
+    if (!artikliArray || artikliArray.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Order has no items' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
     // Prepare order data for payment
     const paymentOrder: PaymentOrder = {
       id: order.id,
       total: order.skupna_cena,
       currency: 'EUR',
-      items: order.artikli.map((item: any) => ({
-        name: item.naziv,
-        quantity: item.quantity,
-        price: item.final_price || item.cena
+      items: artikliArray.map((item: any) => ({
+        name: item.naziv || 'Unknown Item',
+        quantity: item.quantity || 1,
+        price: item.final_price || item.cena || 0
       }))
     };
 
     // Create mock Nexi payment session
     const paymentSession = await createMockNexiSession(paymentOrder);
 
-    // Store session info in order for later verification
-    await supabaseClient
+    // Store session info in order for later verification - SAFEGUARD: Only update orders
+    const { error: updateError } = await supabaseClient
       .from('narocila')
       .update({ 
         opombe: JSON.stringify({ 
@@ -109,6 +132,11 @@ serve(async (req) => {
         })
       })
       .eq('id', order.id)
+
+    if (updateError) {
+      console.error('Error updating order:', updateError);
+      // Continue anyway, as payment session was created
+    }
 
     return new Response(
       JSON.stringify(paymentSession),

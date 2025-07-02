@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, Package, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +29,7 @@ export default function PaymentSuccess() {
       // Mock payment verification
       const sessionId = searchParams.get('session_id') || 'mock_session';
       
-      // Find and update the order
+      // Find and update the order - IMPORTANT: No product deletion here, only order updates
       const { data: orders, error } = await supabase
         .from('narocila')
         .select('*')
@@ -43,13 +43,22 @@ export default function PaymentSuccess() {
       if (orders && orders.length > 0) {
         const order = orders[0];
         
-        // Update order status to confirmed
-        await supabase
+        // Parse existing opombe safely
+        let existingNotes = {};
+        try {
+          existingNotes = order.opombe ? JSON.parse(order.opombe) : {};
+        } catch (parseError) {
+          console.error('Error parsing opombe:', parseError);
+          existingNotes = {};
+        }
+        
+        // Update order status to confirmed - SAFEGUARD: Only update orders, never delete products
+        const { error: updateError } = await supabase
           .from('narocila')
           .update({ 
             status: 'potrjeno',
             opombe: JSON.stringify({
-              ...JSON.parse(order.opombe || '{}'),
+              ...existingNotes,
               payment_confirmed: true,
               payment_date: new Date().toISOString(),
               transaction_id: `txn_${sessionId}_${Date.now()}`
@@ -57,11 +66,19 @@ export default function PaymentSuccess() {
           })
           .eq('id', order.id);
 
+        if (updateError) throw updateError;
+
         setOrderNumber(order.id.slice(0, 8));
         
         toast({
           title: 'Plačilo uspešno!',
           description: `Vaše naročilo ${order.id.slice(0, 8)} je bilo uspešno plačano.`,
+        });
+      } else {
+        console.warn('No matching order found for session:', sessionId);
+        toast({
+          title: 'Opozorilo',
+          description: 'Naročilo ni bilo najdeno, vendar je plačilo uspešno.',
         });
       }
     } catch (error) {

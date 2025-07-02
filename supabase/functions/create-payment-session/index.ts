@@ -1,0 +1,130 @@
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface PaymentOrder {
+  id: string;
+  total: number;
+  currency: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
+}
+
+// Mock Nexi payment session creation
+const createMockNexiSession = async (order: PaymentOrder) => {
+  const sessionId = `mock_session_${Date.now()}`;
+  const redirectUrl = `https://fake-nexi-redirect.com/checkout/${sessionId}`;
+  
+  // Log the "API call" with environment variables
+  console.log('Mock Nexi API Call:', {
+    alias: Deno.env.get('NEXI_ALIAS'),
+    env: Deno.env.get('NEXI_ENV'),
+    order: order,
+    successUrl: Deno.env.get('NEXI_SUCCESS_URL'),
+    cancelUrl: Deno.env.get('NEXI_CANCEL_URL'),
+    callbackUrl: Deno.env.get('NEXI_CALLBACK_URL')
+  });
+  
+  return {
+    redirectUrl,
+    sessionId
+  };
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    )
+
+    // Get user from auth header
+    const authHeader = req.headers.get('Authorization')!
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user } } = await supabaseClient.auth.getUser(token)
+
+    if (!user) {
+      throw new Error('Unauthorized')
+    }
+
+    // Get or create active order for user
+    let { data: order, error: orderError } = await supabaseClient
+      .from('narocila')
+      .select('*')
+      .eq('uporabnik_id', user.id)
+      .eq('status', 'oddano')
+      .order('datum', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (orderError && orderError.code !== 'PGRST116') {
+      throw orderError
+    }
+
+    if (!order) {
+      return new Response(
+        JSON.stringify({ error: 'No active order found' }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // Prepare order data for payment
+    const paymentOrder: PaymentOrder = {
+      id: order.id,
+      total: order.skupna_cena,
+      currency: 'EUR',
+      items: order.artikli.map((item: any) => ({
+        name: item.naziv,
+        quantity: item.quantity,
+        price: item.final_price || item.cena
+      }))
+    };
+
+    // Create mock Nexi payment session
+    const paymentSession = await createMockNexiSession(paymentOrder);
+
+    // Store session info in order for later verification
+    await supabaseClient
+      .from('narocila')
+      .update({ 
+        opombe: JSON.stringify({ 
+          payment_session_id: paymentSession.sessionId,
+          payment_provider: 'nexi_mock'
+        })
+      })
+      .eq('id', order.id)
+
+    return new Response(
+      JSON.stringify(paymentSession),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
+
+  } catch (error) {
+    console.error('Payment session creation error:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
+  }
+})

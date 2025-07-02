@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -105,7 +104,8 @@ export default function Checkout() {
         description: `Številka naročila: ${data.id.slice(0, 8)}`,
       });
 
-      navigate('/orders');
+      // Redirect to payment page instead of orders
+      navigate('/placilo');
     } catch (error) {
       console.error('Error creating order:', error);
       toast({
@@ -235,7 +235,7 @@ export default function Checkout() {
                     size="lg"
                     disabled={loading}
                   >
-                    {loading ? t('common.loading') : t('checkout.placeOrder')}
+                    {loading ? t('common.loading') : 'Nadaljuj na plačilo'}
                   </Button>
                 </form>
               </CardContent>

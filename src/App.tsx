@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +16,9 @@ import ProductDetail from "./pages/ProductDetail";
 import Categories from "./pages/Categories";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import Placilo from "./pages/Placilo";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
 import Wishlist from "./pages/Wishlist";
 import Orders from "./pages/Orders";
 import Profile from "./pages/Profile";
@@ -50,6 +54,9 @@ const App = () => (
                     <Route path="/product/:id" element={<ProductDetail />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/placilo" element={<Placilo />} />
+                    <Route path="/payment-success" element={<PaymentSuccess />} />
+                    <Route path="/payment-cancel" element={<PaymentCancel />} />
                     <Route path="/wishlist" element={<Wishlist />} />
                     <Route path="/orders" element={<Orders />} />
                     <Route path="/profile" element={<Profile />} />

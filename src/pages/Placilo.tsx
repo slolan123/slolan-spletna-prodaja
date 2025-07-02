@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -134,6 +133,11 @@ export default function Placilo() {
   const handlePayment = async () => {
     if (!order) {
       console.error('❌ No order available for payment');
+      toast({
+        title: 'Napaka',
+        description: 'Ni naročila za plačilo.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -145,10 +149,20 @@ export default function Placilo() {
       
       // SAFEGUARD: Only create payment session, never modify product data
       const { data, error } = await supabase.functions.invoke('create-payment-session', {
-        body: { orderId: order.id }
+        body: JSON.stringify({ 
+          orderId: order.id,
+          timestamp: new Date().toISOString()
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-      console.log('📤 Function response:', { data, error });
+      console.log('📤 Function response:', { 
+        data, 
+        error,
+        hasRedirectUrl: !!data?.redirectUrl
+      });
 
       if (error) {
         console.error('❌ Supabase function error:', error);
@@ -156,12 +170,15 @@ export default function Placilo() {
       }
 
       // Enhanced safety check for redirect URL
-      if (!data?.redirectUrl) {
+      if (!data || !data.redirectUrl) {
         console.error('❌ Missing redirect URL in response:', data);
         throw new Error('Redirect URL is missing from payment session response');
       }
 
-      console.log('✅ Payment session created successfully:', data);
+      console.log('✅ Payment session created successfully:', {
+        redirectUrl: data.redirectUrl,
+        sessionId: data.sessionId
+      });
       
       toast({
         title: 'Preusmerjanje na plačilo',
@@ -170,9 +187,14 @@ export default function Placilo() {
       
       console.log('🔄 Redirecting to:', data.redirectUrl);
       
-      // Simulate redirect delay and then redirect
+      // Redirect to payment success page
       setTimeout(() => {
-        window.location.href = data.redirectUrl;
+        if (data.redirectUrl.startsWith('http')) {
+          window.location.href = data.redirectUrl;
+        } else {
+          // Handle relative URLs
+          navigate(data.redirectUrl);
+        }
       }, 1000);
 
     } catch (error) {

@@ -25,16 +25,21 @@ const createMockNexiSession = async (order: PaymentOrder) => {
   const sessionId = `mock_session_${Date.now()}`;
   const redirectUrl = `/payment-success?session=${sessionId}&order=${order.id}`;
   
-  // Log the "API call" with environment variables
+  // Log the "API call" with environment variables for debugging
   console.log('📡 Mock Nexi API Call:', {
-    alias: Deno.env.get('NEXI_ALIAS') || 'MISSING_ALIAS',
-    env: Deno.env.get('NEXI_ENV') || 'MISSING_ENV',
-    order: order,
-    successUrl: Deno.env.get('NEXI_SUCCESS_URL') || 'MISSING_SUCCESS_URL',
-    cancelUrl: Deno.env.get('NEXI_CANCEL_URL') || 'MISSING_CANCEL_URL',
-    callbackUrl: Deno.env.get('NEXI_CALLBACK_URL') || 'MISSING_CALLBACK_URL',
+    alias: Deno.env.get('NEXI_ALIAS') || 'test_alias',
+    env: Deno.env.get('NEXI_ENV') || 'test',
+    order: {
+      id: order.id,
+      total: order.total,
+      currency: order.currency,
+      itemCount: order.items.length
+    },
     generatedRedirectUrl: redirectUrl
   });
+  
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 100));
   
   return {
     redirectUrl,
@@ -43,30 +48,39 @@ const createMockNexiSession = async (order: PaymentOrder) => {
 };
 
 serve(async (req) => {
-  console.log('🚀 Edge Function called with method:', req.method);
+  console.log('🚀 Edge Function called:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log('✅ Handling CORS preflight request');
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 200,
+      headers: corsHeaders 
+    });
   }
 
   try {
-    console.log('🔧 Starting payment session creation...');
-    
-    // Validate required environment variables
+    // Validate environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
     console.log('🔑 Environment check:', {
       hasSupabaseUrl: !!supabaseUrl,
-      hasAnonKey: !!supabaseAnonKey
+      hasAnonKey: !!supabaseAnonKey,
+      url: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING'
     });
     
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('❌ Missing required environment variables');
       return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
+        JSON.stringify({ 
+          error: 'Server configuration error',
+          details: 'Missing Supabase credentials'
+        }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -76,14 +90,20 @@ serve(async (req) => {
 
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Get user from auth header
+    // Get and validate authorization header
     const authHeader = req.headers.get('Authorization');
-    console.log('🔐 Auth header present:', !!authHeader);
+    console.log('🔐 Auth header check:', {
+      present: !!authHeader,
+      length: authHeader?.length || 0
+    });
     
     if (!authHeader) {
       console.error('❌ Authorization header missing');
       return new Response(
-        JSON.stringify({ error: 'Authorization header missing' }),
+        JSON.stringify({ 
+          error: 'Authorization required',
+          details: 'Missing authorization header'
+        }),
         { 
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -92,14 +112,15 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    console.log('🎫 Token extracted, length:', token.length);
-    
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
       console.error('❌ Auth error:', userError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ 
+          error: 'Unauthorized',
+          details: userError?.message || 'Invalid token'
+        }),
         { 
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -107,9 +128,25 @@ serve(async (req) => {
       );
     }
 
-    console.log('✅ User authenticated:', user.id);
+    console.log('✅ User authenticated:', {
+      userId: user.id,
+      email: user.email
+    });
 
-    // Get or create active order for user - SAFEGUARD: Only select orders, never delete products
+    // Parse request body (optional for this endpoint)
+    let requestBody = {};
+    try {
+      const bodyText = await req.text();
+      if (bodyText) {
+        requestBody = JSON.parse(bodyText);
+      }
+    } catch (parseError) {
+      console.log('ℹ️ No JSON body or empty body, continuing...');
+    }
+
+    console.log('📨 Request body:', requestBody);
+
+    // Get active order for user - SAFEGUARD: Only select orders, never delete products
     console.log('🔍 Fetching active order for user:', user.id);
     
     const { data: order, error: orderError } = await supabaseClient
@@ -124,7 +161,10 @@ serve(async (req) => {
     if (orderError) {
       console.error('❌ Order fetch error:', orderError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch order' }),
+        JSON.stringify({ 
+          error: 'Failed to fetch order',
+          details: orderError.message
+        }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -132,12 +172,20 @@ serve(async (req) => {
       );
     }
 
-    console.log('📦 Order found:', !!order, order?.id);
+    console.log('📦 Order query result:', {
+      found: !!order,
+      orderId: order?.id,
+      status: order?.status,
+      total: order?.skupna_cena
+    });
 
     if (!order) {
       console.error('❌ No active order found');
       return new Response(
-        JSON.stringify({ error: 'No active order found' }),
+        JSON.stringify({ 
+          error: 'No active order found',
+          details: 'Please create an order first'
+        }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -148,8 +196,6 @@ serve(async (req) => {
     // Parse artikli safely
     let artikliArray = [];
     try {
-      console.log('📋 Parsing artikli, type:', typeof order.artikli);
-      
       if (typeof order.artikli === 'string') {
         artikliArray = JSON.parse(order.artikli);
       } else if (Array.isArray(order.artikli)) {
@@ -157,17 +203,32 @@ serve(async (req) => {
       } else {
         artikliArray = [];
       }
-      
-      console.log('✅ Artikli parsed, count:', artikliArray.length);
+      console.log('✅ Artikli parsed:', {
+        type: typeof order.artikli,
+        count: artikliArray.length,
+        sample: artikliArray[0] || null
+      });
     } catch (parseError) {
       console.error('❌ Error parsing artikli:', parseError);
-      artikliArray = [];
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid order data',
+          details: 'Order items could not be parsed'
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     if (!artikliArray || artikliArray.length === 0) {
       console.error('❌ Order has no items');
       return new Response(
-        JSON.stringify({ error: 'Order has no items' }),
+        JSON.stringify({ 
+          error: 'Order has no items',
+          details: 'Cannot process payment for empty order'
+        }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -175,19 +236,20 @@ serve(async (req) => {
       );
     }
 
-    // Validate order data
+    // Validate order total
     if (!order.skupna_cena || order.skupna_cena <= 0) {
       console.error('❌ Invalid order total:', order.skupna_cena);
       return new Response(
-        JSON.stringify({ error: 'Invalid order total' }),
+        JSON.stringify({ 
+          error: 'Invalid order total',
+          details: `Order total is ${order.skupna_cena}`
+        }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
-
-    console.log('💰 Order total validated:', order.skupna_cena);
 
     // Prepare order data for payment
     const paymentOrder: PaymentOrder = {
@@ -201,22 +263,21 @@ serve(async (req) => {
       }))
     };
 
-    console.log('📄 Payment order prepared:', {
-      id: paymentOrder.id,
-      total: paymentOrder.total,
-      itemCount: paymentOrder.items.length
-    });
+    console.log('📄 Payment order prepared:', paymentOrder);
 
-    // Create mock Nexi payment session - always returns valid redirectUrl
+    // Create mock Nexi payment session
     const paymentSession = await createMockNexiSession(paymentOrder);
 
     console.log('🎯 Payment session created:', paymentSession);
 
-    // Validate the payment session response
+    // Validate payment session response
     if (!paymentSession || !paymentSession.redirectUrl) {
       console.error('❌ Payment session creation failed - no redirect URL');
       return new Response(
-        JSON.stringify({ error: 'Payment session creation failed' }),
+        JSON.stringify({ 
+          error: 'Payment session creation failed',
+          details: 'No redirect URL generated'
+        }),
         { 
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -224,7 +285,7 @@ serve(async (req) => {
       );
     }
 
-    // Store session info in order for later verification - SAFEGUARD: Only update orders
+    // Store session info in order - SAFEGUARD: Only update orders
     console.log('💾 Storing session info in order...');
     
     const { error: updateError } = await supabaseClient
@@ -245,12 +306,10 @@ serve(async (req) => {
       console.log('✅ Order updated with session info');
     }
 
-    console.log('🎉 Payment session created successfully, returning response');
-
-    // Always return a valid response with redirectUrl
     const response = {
       redirectUrl: paymentSession.redirectUrl,
-      sessionId: paymentSession.sessionId
+      sessionId: paymentSession.sessionId,
+      success: true
     };
     
     console.log('📤 Final response:', response);
@@ -264,18 +323,17 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('💥 Unexpected error in payment session creation:', error);
-    console.error('📊 Error details:', {
+    console.error('💥 Unexpected error:', {
       name: error?.name,
       message: error?.message,
       stack: error?.stack
     });
     
-    // Always return a valid JSON response, even on unexpected errors
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
       }),
       { 
         status: 500,

@@ -20,12 +20,13 @@ interface PaymentOrder {
 
 // Mock Nexi payment session creation - SAFEGUARD: No product deletion logic here
 const createMockNexiSession = async (order: PaymentOrder) => {
+  console.log('🎯 Creating mock Nexi session for order:', order.id);
+  
   const sessionId = `mock_session_${Date.now()}`;
-  // Always return a valid redirect URL for testing
   const redirectUrl = `/payment-success?session=${sessionId}&order=${order.id}`;
   
   // Log the "API call" with environment variables
-  console.log('Mock Nexi API Call:', {
+  console.log('📡 Mock Nexi API Call:', {
     alias: Deno.env.get('NEXI_ALIAS') || 'MISSING_ALIAS',
     env: Deno.env.get('NEXI_ENV') || 'MISSING_ENV',
     order: order,
@@ -42,18 +43,28 @@ const createMockNexiSession = async (order: PaymentOrder) => {
 };
 
 serve(async (req) => {
+  console.log('🚀 Edge Function called with method:', req.method);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('✅ Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('🔧 Starting payment session creation...');
+    
     // Validate required environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
+    console.log('🔑 Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasAnonKey: !!supabaseAnonKey
+    });
+    
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing required environment variables');
+      console.error('❌ Missing required environment variables');
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
         { 
@@ -67,7 +78,10 @@ serve(async (req) => {
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization');
+    console.log('🔐 Auth header present:', !!authHeader);
+    
     if (!authHeader) {
+      console.error('❌ Authorization header missing');
       return new Response(
         JSON.stringify({ error: 'Authorization header missing' }),
         { 
@@ -78,10 +92,12 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
+    console.log('🎫 Token extracted, length:', token.length);
+    
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
-      console.error('Auth error:', userError);
+      console.error('❌ Auth error:', userError);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { 
@@ -91,7 +107,11 @@ serve(async (req) => {
       );
     }
 
+    console.log('✅ User authenticated:', user.id);
+
     // Get or create active order for user - SAFEGUARD: Only select orders, never delete products
+    console.log('🔍 Fetching active order for user:', user.id);
+    
     const { data: order, error: orderError } = await supabaseClient
       .from('narocila')
       .select('*')
@@ -102,7 +122,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (orderError) {
-      console.error('Order fetch error:', orderError);
+      console.error('❌ Order fetch error:', orderError);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch order' }),
         { 
@@ -112,7 +132,10 @@ serve(async (req) => {
       );
     }
 
+    console.log('📦 Order found:', !!order, order?.id);
+
     if (!order) {
+      console.error('❌ No active order found');
       return new Response(
         JSON.stringify({ error: 'No active order found' }),
         { 
@@ -125,6 +148,8 @@ serve(async (req) => {
     // Parse artikli safely
     let artikliArray = [];
     try {
+      console.log('📋 Parsing artikli, type:', typeof order.artikli);
+      
       if (typeof order.artikli === 'string') {
         artikliArray = JSON.parse(order.artikli);
       } else if (Array.isArray(order.artikli)) {
@@ -132,12 +157,15 @@ serve(async (req) => {
       } else {
         artikliArray = [];
       }
+      
+      console.log('✅ Artikli parsed, count:', artikliArray.length);
     } catch (parseError) {
-      console.error('Error parsing artikli:', parseError);
+      console.error('❌ Error parsing artikli:', parseError);
       artikliArray = [];
     }
 
     if (!artikliArray || artikliArray.length === 0) {
+      console.error('❌ Order has no items');
       return new Response(
         JSON.stringify({ error: 'Order has no items' }),
         { 
@@ -149,6 +177,7 @@ serve(async (req) => {
 
     // Validate order data
     if (!order.skupna_cena || order.skupna_cena <= 0) {
+      console.error('❌ Invalid order total:', order.skupna_cena);
       return new Response(
         JSON.stringify({ error: 'Invalid order total' }),
         { 
@@ -157,6 +186,8 @@ serve(async (req) => {
         }
       );
     }
+
+    console.log('💰 Order total validated:', order.skupna_cena);
 
     // Prepare order data for payment
     const paymentOrder: PaymentOrder = {
@@ -170,12 +201,20 @@ serve(async (req) => {
       }))
     };
 
+    console.log('📄 Payment order prepared:', {
+      id: paymentOrder.id,
+      total: paymentOrder.total,
+      itemCount: paymentOrder.items.length
+    });
+
     // Create mock Nexi payment session - always returns valid redirectUrl
     const paymentSession = await createMockNexiSession(paymentOrder);
 
+    console.log('🎯 Payment session created:', paymentSession);
+
     // Validate the payment session response
     if (!paymentSession || !paymentSession.redirectUrl) {
-      console.error('Payment session creation failed - no redirect URL');
+      console.error('❌ Payment session creation failed - no redirect URL');
       return new Response(
         JSON.stringify({ error: 'Payment session creation failed' }),
         { 
@@ -186,6 +225,8 @@ serve(async (req) => {
     }
 
     // Store session info in order for later verification - SAFEGUARD: Only update orders
+    console.log('💾 Storing session info in order...');
+    
     const { error: updateError } = await supabaseClient
       .from('narocila')
       .update({ 
@@ -198,19 +239,24 @@ serve(async (req) => {
       .eq('id', order.id);
 
     if (updateError) {
-      console.error('Error updating order:', updateError);
+      console.error('⚠️ Error updating order (non-critical):', updateError);
       // Continue anyway, as payment session was created successfully
-      // Don't fail the entire request for this non-critical update
+    } else {
+      console.log('✅ Order updated with session info');
     }
 
-    console.log('Payment session created successfully:', paymentSession);
+    console.log('🎉 Payment session created successfully, returning response');
 
     // Always return a valid response with redirectUrl
+    const response = {
+      redirectUrl: paymentSession.redirectUrl,
+      sessionId: paymentSession.sessionId
+    };
+    
+    console.log('📤 Final response:', response);
+
     return new Response(
-      JSON.stringify({
-        redirectUrl: paymentSession.redirectUrl,
-        sessionId: paymentSession.sessionId
-      }),
+      JSON.stringify(response),
       { 
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -218,7 +264,12 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Unexpected error in payment session creation:', error);
+    console.error('💥 Unexpected error in payment session creation:', error);
+    console.error('📊 Error details:', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack
+    });
     
     // Always return a valid JSON response, even on unexpected errors
     return new Response(

@@ -57,6 +57,8 @@ export default function Placilo() {
 
   const loadActiveOrder = async () => {
     try {
+      console.log('🔍 Loading active order for user:', user?.id);
+      
       // SAFEGUARD: Only select orders, never delete products
       const { data, error } = await supabase
         .from('narocila')
@@ -72,6 +74,8 @@ export default function Placilo() {
       }
 
       if (data) {
+        console.log('📦 Order data received:', data);
+        
         // Parse JSON fields safely
         let parsedArtikli: OrderItem[] = [];
         try {
@@ -81,7 +85,7 @@ export default function Placilo() {
             ? data.artikli 
             : [];
         } catch (parseError) {
-          console.error('Error parsing artikli:', parseError);
+          console.error('❌ Error parsing artikli:', parseError);
           parsedArtikli = [];
         }
 
@@ -99,8 +103,15 @@ export default function Placilo() {
           uporabnik_id: data.uporabnik_id
         };
 
+        console.log('✅ Order parsed successfully:', {
+          id: typedOrder.id,
+          itemCount: typedOrder.artikli.length,
+          total: typedOrder.skupna_cena
+        });
+
         setOrder(typedOrder);
       } else {
+        console.log('❌ No active order found');
         toast({
           title: 'Ni aktivnega naročila',
           description: 'Najprej dodajte izdelke v košarico.',
@@ -109,7 +120,7 @@ export default function Placilo() {
         navigate('/cart');
       }
     } catch (error) {
-      console.error('Error loading order:', error);
+      console.error('❌ Error loading order:', error);
       toast({
         title: 'Napaka',
         description: 'Napaka pri nalaganju naročila.',
@@ -121,33 +132,43 @@ export default function Placilo() {
   };
 
   const handlePayment = async () => {
-    if (!order) return;
+    if (!order) {
+      console.error('❌ No order available for payment');
+      return;
+    }
 
+    console.log('💳 Starting payment process for order:', order.id);
     setProcessing(true);
     
     try {
+      console.log('📡 Calling create-payment-session function...');
+      
       // SAFEGUARD: Only create payment session, never modify product data
       const { data, error } = await supabase.functions.invoke('create-payment-session', {
         body: { orderId: order.id }
       });
 
+      console.log('📤 Function response:', { data, error });
+
       if (error) {
-        console.error('Supabase function error:', error);
+        console.error('❌ Supabase function error:', error);
         throw new Error(`Payment session creation failed: ${error.message}`);
       }
 
       // Enhanced safety check for redirect URL
       if (!data?.redirectUrl) {
-        console.error('Missing redirect URL in response:', data);
+        console.error('❌ Missing redirect URL in response:', data);
         throw new Error('Redirect URL is missing from payment session response');
       }
 
-      console.log('Payment session created successfully:', data);
+      console.log('✅ Payment session created successfully:', data);
       
       toast({
         title: 'Preusmerjanje na plačilo',
         description: 'Preusmerjamo vas na varno plačilno stran...',
       });
+      
+      console.log('🔄 Redirecting to:', data.redirectUrl);
       
       // Simulate redirect delay and then redirect
       setTimeout(() => {
@@ -155,7 +176,7 @@ export default function Placilo() {
       }, 1000);
 
     } catch (error) {
-      console.error('Payment initiation error:', error);
+      console.error('💥 Payment initiation error:', error);
       toast({
         title: 'Napaka pri plačilu',
         description: error instanceof Error ? error.message : 'Prišlo je do napake pri inicializaciji plačila.',
@@ -231,7 +252,7 @@ export default function Placilo() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  {order.artikli.map((item, index) => (
+                  {order?.artikli.map((item, index) => (
                     <div key={index} className="flex justify-between items-center py-3 border-b last:border-b-0">
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900">{item.naziv}</h4>
@@ -252,7 +273,7 @@ export default function Placilo() {
                 
                 <div className="flex justify-between font-bold text-2xl text-gray-900">
                   <span>Skupaj</span>
-                  <span className="text-primary">€{order.skupna_cena.toFixed(2)}</span>
+                  <span className="text-primary">€{order?.skupna_cena.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -294,7 +315,7 @@ export default function Placilo() {
 
                 <Button
                   onClick={handlePayment}
-                  disabled={processing}
+                  disabled={processing || !order}
                   className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300"
                   size="lg"
                 >
@@ -306,7 +327,7 @@ export default function Placilo() {
                   ) : (
                     <>
                       <CreditCard className="mr-2 h-5 w-5" />
-                      Plačaj €{order.skupna_cena.toFixed(2)}
+                      Plačaj €{order?.skupna_cena.toFixed(2)}
                     </>
                   )}
                 </Button>

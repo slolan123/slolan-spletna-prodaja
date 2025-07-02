@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getFrontendPaymentProvider } from '@/services/mockPaymentProvider';
 
 interface OrderItem {
   naziv: string;
@@ -145,56 +146,64 @@ export default function Placilo() {
     setProcessing(true);
     
     try {
-      console.log('📡 Calling create-payment-session function...');
+      // Use frontend mock payment provider instead of Edge functions
+      const paymentProvider = getFrontendPaymentProvider();
       
-      // SAFEGUARD: Only create payment session, never modify product data
-      const { data, error } = await supabase.functions.invoke('create-payment-session', {
-        body: JSON.stringify({ 
-          orderId: order.id,
-          timestamp: new Date().toISOString()
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      // Prepare order data for payment
+      const paymentOrder = {
+        id: order.id,
+        total: order.skupna_cena,
+        currency: 'EUR',
+        items: order.artikli.map((item: any) => ({
+          name: item.naziv || 'Unknown Item',
+          quantity: item.quantity || 1,
+          price: item.final_price || item.cena || 0
+        }))
+      };
 
-      console.log('📤 Function response:', { 
-        data, 
-        error,
-        hasRedirectUrl: !!data?.redirectUrl
-      });
+      console.log('📄 Payment order prepared:', paymentOrder);
 
-      if (error) {
-        console.error('❌ Supabase function error:', error);
-        throw new Error(`Payment session creation failed: ${error.message}`);
+      // Create payment session using frontend provider
+      const paymentSession = await paymentProvider.createPaymentSession(paymentOrder);
+
+      console.log('📤 Payment session response:', paymentSession);
+
+      if (!paymentSession.success || !paymentSession.redirectUrl) {
+        console.error('❌ Payment session creation failed:', paymentSession.error);
+        throw new Error(paymentSession.error || 'Payment session creation failed');
       }
 
-      // Enhanced safety check for redirect URL
-      if (!data || !data.redirectUrl) {
-        console.error('❌ Missing redirect URL in response:', data);
-        throw new Error('Redirect URL is missing from payment session response');
-      }
+      // Store session info in order
+      console.log('💾 Storing session info in order...');
+      
+      const { error: updateError } = await supabase
+        .from('narocila')
+        .update({ 
+          opombe: JSON.stringify({ 
+            payment_session_id: paymentSession.sessionId,
+            payment_provider: 'frontend_mock_nexi',
+            session_created_at: new Date().toISOString()
+          })
+        })
+        .eq('id', order.id);
 
-      console.log('✅ Payment session created successfully:', {
-        redirectUrl: data.redirectUrl,
-        sessionId: data.sessionId
-      });
+      if (updateError) {
+        console.error('⚠️ Error updating order (non-critical):', updateError);
+        // Continue anyway, as payment session was created successfully
+      } else {
+        console.log('✅ Order updated with session info');
+      }
       
       toast({
         title: 'Preusmerjanje na plačilo',
         description: 'Preusmerjamo vas na varno plačilno stran...',
       });
       
-      console.log('🔄 Redirecting to:', data.redirectUrl);
+      console.log('🔄 Redirecting to:', paymentSession.redirectUrl);
       
-      // Redirect to payment success page
+      // Redirect after a short delay
       setTimeout(() => {
-        if (data.redirectUrl.startsWith('http')) {
-          window.location.href = data.redirectUrl;
-        } else {
-          // Handle relative URLs
-          navigate(data.redirectUrl);
-        }
+        navigate(paymentSession.redirectUrl);
       }, 1000);
 
     } catch (error) {

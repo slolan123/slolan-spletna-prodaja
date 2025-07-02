@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { getFrontendPaymentProvider } from '@/services/mockPaymentProvider';
 
 export default function PaymentSuccess() {
   const { t } = useTranslation();
@@ -26,15 +27,52 @@ export default function PaymentSuccess() {
 
   const processPaymentSuccess = async () => {
     try {
-      // Mock payment verification
-      const sessionId = searchParams.get('session_id') || 'mock_session';
+      const sessionId = searchParams.get('session_id');
+      const orderId = searchParams.get('order_id');
       
-      // Find and update the order - IMPORTANT: No product deletion here, only order updates
-      const { data: orders, error } = await supabase
+      console.log('🎉 Processing payment success:', { sessionId, orderId });
+
+      if (!sessionId) {
+        console.warn('⚠️ No session ID found in URL parameters');
+        toast({
+          title: 'Opozorilo',
+          description: 'Manjka ID seje, vendar je plačilo uspešno.',
+        });
+        setProcessing(false);
+        return;
+      }
+
+      // Verify payment using frontend provider
+      const paymentProvider = getFrontendPaymentProvider();
+      const verificationResult = await paymentProvider.verifyPayment(sessionId);
+
+      console.log('🔍 Payment verification result:', verificationResult);
+
+      if (!verificationResult.success) {
+        console.error('❌ Payment verification failed:', verificationResult.error);
+        toast({
+          title: 'Napaka',
+          description: 'Prišlo je do napake pri preverjanju plačila.',
+          variant: 'destructive',
+        });
+        setProcessing(false);
+        return;
+      }
+
+      // Find and update the order
+      let orderQuery = supabase
         .from('narocila')
         .select('*')
-        .eq('uporabnik_id', user?.id)
-        .like('opombe', `%${sessionId}%`)
+        .eq('uporabnik_id', user?.id);
+
+      // If we have orderId, use it, otherwise search by session in opombe
+      if (orderId) {
+        orderQuery = orderQuery.eq('id', orderId);
+      } else {
+        orderQuery = orderQuery.like('opombe', `%${sessionId}%`);
+      }
+
+      const { data: orders, error } = await orderQuery
         .order('datum', { ascending: false })
         .limit(1);
 
@@ -52,7 +90,7 @@ export default function PaymentSuccess() {
           existingNotes = {};
         }
         
-        // Update order status to confirmed - SAFEGUARD: Only update orders, never delete products
+        // Update order status to confirmed
         const { error: updateError } = await supabase
           .from('narocila')
           .update({ 
@@ -61,7 +99,7 @@ export default function PaymentSuccess() {
               ...existingNotes,
               payment_confirmed: true,
               payment_date: new Date().toISOString(),
-              transaction_id: `txn_${sessionId}_${Date.now()}`
+              transaction_id: verificationResult.transactionId || `txn_${sessionId}_${Date.now()}`
             })
           })
           .eq('id', order.id);

@@ -26,63 +26,29 @@ export abstract class PaymentProvider {
   abstract verifyPayment(sessionId: string): Promise<PaymentResult>;
 }
 
-// Mock Nexi implementation - will be replaced with real API
-// SAFEGUARD: This class only handles payment processing, never modifies product data
+// DEPRECATED: Use getFrontendPaymentProvider from mockPaymentProvider.ts instead
+// This mock provider was dependent on Supabase Edge functions
 export class MockNexiProvider extends PaymentProvider {
   async createPaymentSession(order: PaymentOrder): Promise<PaymentSession> {
-    console.log('🎯 MockNexiProvider.createPaymentSession called with order:', order.id);
+    console.warn('⚠️ MockNexiProvider is deprecated. Use getFrontendPaymentProvider instead.');
     
-    // Validate order data
-    if (!order || !order.id || !order.total || !order.items || order.items.length === 0) {
-      console.error('❌ Invalid order data provided:', order);
-      throw new Error('Invalid order data provided');
-    }
-
-    // Mock Nexi session creation - always return valid redirect URL
-    const sessionId = `mock_session_${Date.now()}`;
+    // Fallback implementation that works without Edge functions
+    const sessionId = `fallback_session_${Date.now()}`;
+    const redirectUrl = `/payment-success?session_id=${sessionId}&order_id=${order.id}`;
     
-    // For testing, redirect to our success page instead of external URL
-    const redirectUrl = '/payment-success';
-    
-    console.log('⏳ Simulating API call delay...');
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const result = {
+    return {
       redirectUrl,
       sessionId
     };
-    
-    console.log('✅ Mock Nexi createPaymentSession result:', result);
-    
-    return result;
   }
 
   async verifyPayment(sessionId: string): Promise<PaymentResult> {
-    console.log('🔍 MockNexiProvider.verifyPayment called with sessionId:', sessionId);
+    console.warn('⚠️ MockNexiProvider is deprecated. Use getFrontendPaymentProvider instead.');
     
-    // Validate session ID
-    if (!sessionId || typeof sessionId !== 'string') {
-      console.error('❌ Invalid session ID:', sessionId);
-      return {
-        success: false,
-        error: 'Invalid session ID'
-      };
-    }
-
-    console.log('⏳ Simulating payment verification delay...');
-    // Mock payment verification - always successful for testing
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const result = {
+    return {
       success: true,
-      transactionId: `txn_${sessionId}_${Date.now()}`
+      transactionId: `fallback_txn_${sessionId}_${Date.now()}`
     };
-    
-    console.log('✅ Mock Nexi verifyPayment result:', result);
-    
-    return result;
   }
 }
 
@@ -111,20 +77,8 @@ export class RealNexiProvider extends PaymentProvider {
   }
 }
 
-// Factory to get the current payment provider
+// DEPRECATED: Factory function - use getFrontendPaymentProvider instead
 export const getPaymentProvider = (): PaymentProvider => {
-  // For now, always return mock Nexi
-  // Later: switch based on configuration or environment variables
+  console.warn('⚠️ getPaymentProvider is deprecated. Use getFrontendPaymentProvider from mockPaymentProvider.ts instead.');
   return new MockNexiProvider();
-  
-  // Future implementation:
-  // const useRealNexi = process.env.NODE_ENV === 'production';
-  // if (useRealNexi) {
-  //   return new RealNexiProvider(
-  //     process.env.NEXI_ALIAS!,
-  //     process.env.NEXI_SECRET!,
-  //     process.env.NEXI_ENV!
-  //   );
-  // }
-  // return new MockNexiProvider();
 };

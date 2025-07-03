@@ -1,17 +1,155 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { ProductCard } from '@/components/products/ProductCard';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ShoppingBag, Star, TrendingUp, Shield, ArrowRight, Sparkles, Package, Clock, Award } from 'lucide-react';
 import { HeroAnimation } from '@/components/animations/HeroAnimation';
+
+interface Product {
+  id: string;
+  naziv: string;
+  naziv_en?: string;
+  naziv_de?: string;
+  naziv_it?: string;
+  naziv_ru?: string;
+  cena: number;
+  popust?: number;
+  slika_url?: string;
+  slike_urls?: string[];
+  status: 'novo' | 'znizano' | 'prodano';
+  zaloga: number;
+  na_voljo: boolean;
+  koda: string;
+  seo_slug?: string;
+}
 
 const Index = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [newProducts, setNewProducts] = useState<Product[]>([]);
+  const [saleProducts, setSaleProducts] = useState<Product[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadFeaturedProducts();
+  }, []);
+
+  const loadFeaturedProducts = async () => {
+    try {
+      setLoading(true);
+      
+      // Load new products (recently added)
+      const { data: newData } = await supabase
+        .from('predmeti')
+        .select('*')
+        .eq('na_voljo', true)
+        .eq('status', 'novo')
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      // Load sale products (with discount)
+      const { data: saleData } = await supabase
+        .from('predmeti')
+        .select('*')
+        .eq('na_voljo', true)
+        .eq('status', 'znizano')
+        .gt('popust', 0)
+        .order('popust', { ascending: false })
+        .limit(6);
+
+      // Load featured products (mix of available products)
+      const { data: featuredData } = await supabase
+        .from('predmeti')
+        .select('*')
+        .eq('na_voljo', true)
+        .gt('zaloga', 0)
+        .order('created_at', { ascending: false })
+        .limit(8);
+
+      setNewProducts(newData || []);
+      setSaleProducts(saleData || []);
+      setFeaturedProducts(featuredData || []);
+    } catch (error) {
+      console.error('Error loading featured products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const ProductSection = ({ 
+    title, 
+    subtitle, 
+    products, 
+    viewAllLink, 
+    loading 
+  }: { 
+    title: string; 
+    subtitle: string; 
+    products: Product[]; 
+    viewAllLink: string;
+    loading: boolean;
+  }) => (
+    <section className="py-16 px-4 bg-white">
+      <div className="container mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-3xl font-bold text-black mb-4">{title}</h2>
+          <p className="text-gray-600 max-w-2xl mx-auto mb-8">{subtitle}</p>
+        </motion.div>
+
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="space-y-4">
+                <Skeleton className="aspect-square rounded-lg" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : products.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+              {products.slice(0, 8).map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                >
+                  <ProductCard product={product} />
+                </motion.div>
+              ))}
+            </div>
+            <div className="text-center">
+              <Button asChild variant="outline" size="lg" className="border-black text-black hover:bg-black hover:text-white">
+                <Link to={viewAllLink}>
+                  Prikaži vse
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Trenutno ni izdelkov v tej kategoriji.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 
   return (
     <div className="bg-white relative min-h-screen">
@@ -124,6 +262,33 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* New Products Section */}
+      <ProductSection 
+        title="Novi izdelki"
+        subtitle="Odkrijte naše najnovejše izdelke, ki so ravno prispeli v trgovino"
+        products={newProducts}
+        viewAllLink="/products?status=novo"
+        loading={loading}
+      />
+
+      {/* Sale Products Section */}
+      <ProductSection 
+        title="Akcijske ponudbe"
+        subtitle="Izjemni popusti na izbrane izdelke - omejena količina!"
+        products={saleProducts}
+        viewAllLink="/products?status=znizano"
+        loading={loading}
+      />
+
+      {/* Featured Products Section */}
+      <ProductSection 
+        title="Priporočeni izdelki"
+        subtitle="Naš izbor kakovostnih izdelkov, ki jih priporočamo"
+        products={featuredProducts}
+        viewAllLink="/products"
+        loading={loading}
+      />
 
       {/* Features Section */}
       <section className="py-16 px-4 bg-gray-50">

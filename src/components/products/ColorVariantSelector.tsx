@@ -47,16 +47,16 @@ export const ColorVariantSelector = ({
           <SelectContent>
             {availableVariants.map((variant) => (
               <SelectItem key={variant.id} value={variant.id}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {variant.color_value && (
                     <div 
-                      className="w-4 h-4 rounded-full border border-gray-300"
+                      className="w-4 h-4 rounded-full border border-gray-300 shadow-sm"
                       style={{ backgroundColor: variant.color_value }}
                     />
                   )}
-                  <span className="capitalize">{variant.color_name}</span>
-                  <Badge variant="outline" className="ml-2">
-                    {variant.stock} kos
+                  <span className="capitalize font-medium">{variant.color_name}</span>
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    {variant.stock}
                   </Badge>
                 </div>
               </SelectItem>
@@ -77,17 +77,24 @@ export const ColorVariantSelector = ({
             variant={selectedVariant?.id === variant.id ? 'default' : 'outline'}
             size="sm"
             onClick={() => onVariantSelect(variant)}
-            className="flex items-center gap-2 px-3 py-2"
+            className={`flex items-center gap-2 px-3 py-2 h-auto ${
+              selectedVariant?.id === variant.id 
+                ? 'bg-black text-white border-black' 
+                : 'border-gray-300 hover:border-black hover:bg-gray-50'
+            }`}
             disabled={!variant.available || variant.stock === 0}
           >
             {variant.color_value && (
               <div 
-                className="w-4 h-4 rounded-full border border-gray-300"
+                className="w-4 h-4 rounded-full border border-gray-300 shadow-sm"
                 style={{ backgroundColor: variant.color_value }}
               />
             )}
-            <span className="capitalize">{variant.color_name}</span>
-            <Badge variant="secondary" className="ml-1">
+            <span className="capitalize font-medium">{variant.color_name}</span>
+            <Badge 
+              variant="secondary" 
+              className="ml-1 text-xs bg-gray-100 text-gray-700"
+            >
               {variant.stock}
             </Badge>
           </Button>

@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Settings, LogOut, ShoppingBag, Heart, Search } from 'lucide-react';
+import { User, Settings, LogOut, ShoppingBag, Heart, Search, Menu } from 'lucide-react';
 import { LanguageSelector } from './LanguageSelector';
 import { Input } from '@/components/ui/input';
 import { CartIcon } from './CartIcon';
@@ -29,54 +29,56 @@ export const Header = () => {
   };
 
   return (
-    <header className="bg-background border-b border-border shadow-sm">
+    <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
-            <Link to="/" className="text-2xl font-bold text-primary">
+            <Link to="/" className="text-2xl font-bold text-black">
               Slolan
             </Link>
           </div>
 
-          {/* Search Bar */}
+          {/* Search Bar - Hidden on mobile */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type="text"
-                placeholder={t('common.search')}
-                className="pl-10 w-full"
+                placeholder="Iščite izdelke..."
+                className="pl-10 w-full border-gray-200 focus:border-black focus:ring-black"
               />
             </div>
           </div>
 
           {/* Navigation and User Menu */}
           <div className="flex items-center space-x-4">
-            {/* Main Navigation */}
+            {/* Main Navigation - Hidden on mobile */}
             <nav className="hidden lg:flex items-center space-x-6">
-              <Link to="/categories" className="text-foreground hover:text-primary transition-colors">
-                {t('nav.categories')}
+              <Link to="/categories" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Kategorije
               </Link>
-              <Link to="/products" className="text-foreground hover:text-primary transition-colors">
-                {t('nav.products')}
+              <Link to="/products" className="text-gray-700 hover:text-black transition-colors font-medium">
+                Izdelki
               </Link>
               {user && (
                 <>
-                  <Link to="/wishlist" className="text-foreground hover:text-primary transition-colors flex items-center">
+                  <Link to="/wishlist" className="text-gray-700 hover:text-black transition-colors flex items-center font-medium">
                     <Heart className="h-4 w-4 mr-1" />
-                    {t('nav.wishlist')}
+                    Želje
                   </Link>
-                  <Link to="/orders" className="text-foreground hover:text-primary transition-colors flex items-center">
+                  <Link to="/orders" className="text-gray-700 hover:text-black transition-colors flex items-center font-medium">
                     <ShoppingBag className="h-4 w-4 mr-1" />
-                    {t('nav.orders')}
+                    Naročila
                   </Link>
                 </>
               )}
             </nav>
 
-            {/* Language Selector */}
-            <LanguageSelector />
+            {/* Language Selector - Hidden on mobile */}
+            <div className="hidden md:block">
+              <LanguageSelector />
+            </div>
 
             {/* Cart Icon */}
             <CartIcon />
@@ -87,7 +89,7 @@ export const Header = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-black text-white text-sm">
                         {profile?.ime?.[0]}{profile?.priimek?.[0]}
                       </AvatarFallback>
                     </Avatar>
@@ -113,19 +115,32 @@ export const Header = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/profile">
                       <User className="mr-2 h-4 w-4" />
-                      {t('nav.profile')}
+                      Profil
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/orders">
                       <ShoppingBag className="mr-2 h-4 w-4" />
-                      {t('nav.orders')}
+                      Naročila
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link to="/wishlist">
                       <Heart className="mr-2 h-4 w-4" />
-                      {t('nav.wishlist')}
+                      Želje
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="md:hidden" />
+                  <DropdownMenuItem asChild className="md:hidden">
+                    <Link to="/categories">
+                      <Menu className="mr-2 h-4 w-4" />
+                      Kategorije
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="md:hidden">
+                    <Link to="/products">
+                      <ShoppingBag className="mr-2 h-4 w-4" />
+                      Izdelki
                     </Link>
                   </DropdownMenuItem>
                   {isAdmin && (
@@ -134,7 +149,7 @@ export const Header = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/admin">
                           <Settings className="mr-2 h-4 w-4" />
-                          {t('nav.admin')}
+                          Admin
                         </Link>
                       </DropdownMenuItem>
                     </>
@@ -142,17 +157,17 @@ export const Header = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    {t('nav.logout')}
+                    Odjava
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <div className="flex items-center space-x-2">
-                <Button variant="ghost" asChild>
-                  <Link to="/auth">{t('nav.login')}</Link>
+                <Button variant="ghost" asChild className="hidden sm:inline-flex">
+                  <Link to="/auth">Prijava</Link>
                 </Button>
-                <Button asChild>
-                  <Link to="/auth?mode=register">{t('nav.register')}</Link>
+                <Button asChild className="bg-black text-white hover:bg-gray-800">
+                  <Link to="/auth?mode=register">Registracija</Link>
                 </Button>
               </div>
             )}
@@ -162,11 +177,11 @@ export const Header = () => {
         {/* Mobile Search */}
         <div className="md:hidden mt-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               type="text"
-              placeholder={t('common.search')}
-              className="pl-10 w-full"
+              placeholder="Iščite izdelke..."
+              className="pl-10 w-full border-gray-200 focus:border-black focus:ring-black"
             />
           </div>
         </div>

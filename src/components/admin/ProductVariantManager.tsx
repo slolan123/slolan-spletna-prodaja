@@ -78,7 +78,6 @@ export const ProductVariantManager = ({ productId, onVariantsChange }: ProductVa
       };
 
       if (variant.id) {
-        // Update existing
         const { error } = await supabase
           .from('product_variants')
           .update(variantData)
@@ -86,7 +85,6 @@ export const ProductVariantManager = ({ productId, onVariantsChange }: ProductVa
         
         if (error) throw error;
       } else {
-        // Create new
         const { error } = await supabase
           .from('product_variants')
           .insert([variantData]);
@@ -161,7 +159,7 @@ export const ProductVariantManager = ({ productId, onVariantsChange }: ProductVa
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="text-sm font-medium">Ime barve *</label>
               <Input
@@ -171,19 +169,17 @@ export const ProductVariantManager = ({ productId, onVariantsChange }: ProductVa
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Hex barva</label>
-              <div className="flex gap-2">
-                <Input
+              <label className="text-sm font-medium">Barva (opcijsko)</label>
+              <div className="flex gap-3 items-center">
+                <input
                   type="color"
                   value={formData.color_value || '#000000'}
                   onChange={(e) => setFormData({ ...formData, color_value: e.target.value })}
-                  className="w-16 h-10 p-1"
+                  className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
                 />
-                <Input
-                  value={formData.color_value || ''}
-                  onChange={(e) => setFormData({ ...formData, color_value: e.target.value })}
-                  placeholder="#000000"
-                />
+                <div className="text-sm text-gray-600">
+                  Izberi barvo za vizualni prikaz
+                </div>
               </div>
             </div>
           </div>
@@ -211,6 +207,7 @@ export const ProductVariantManager = ({ productId, onVariantsChange }: ProductVa
             <Button 
               onClick={() => onSave(formData)}
               disabled={!formData.color_name.trim()}
+              className="bg-black text-white hover:bg-gray-800"
             >
               {variant.id ? 'Posodobi' : 'Dodaj'}
             </Button>
@@ -229,7 +226,11 @@ export const ProductVariantManager = ({ productId, onVariantsChange }: ProductVa
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Barvne različice</h3>
-        <Button onClick={() => setEditingVariant(newVariant)} size="sm">
+        <Button 
+          onClick={() => setEditingVariant(newVariant)} 
+          size="sm"
+          className="bg-black text-white hover:bg-gray-800"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Dodaj barvo
         </Button>
@@ -251,13 +252,13 @@ export const ProductVariantManager = ({ productId, onVariantsChange }: ProductVa
                 <div className="flex items-center gap-3">
                   {variant.color_value && (
                     <div 
-                      className="w-6 h-6 rounded-full border border-gray-300"
+                      className="w-8 h-8 rounded-full border border-gray-300 shadow-sm"
                       style={{ backgroundColor: variant.color_value }}
                     />
                   )}
                   <div>
                     <h4 className="font-medium capitalize">{variant.color_name}</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-gray-600">
                       Zaloga: {variant.stock} | Slike: {variant.images.length}
                     </p>
                   </div>
@@ -290,7 +291,7 @@ export const ProductVariantManager = ({ productId, onVariantsChange }: ProductVa
       {variants.length === 0 && !editingVariant && (
         <Card>
           <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">
+            <p className="text-gray-600">
               Ni dodanih barvnih različic. Dodajte prvo barvno različico za ta izdelek.
             </p>
           </CardContent>

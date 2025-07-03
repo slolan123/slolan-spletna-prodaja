@@ -2,91 +2,115 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Mail, Phone, MapPin, Facebook, Instagram, Twitter } from 'lucide-react';
 
 export const Footer = () => {
   const { t } = useTranslation();
 
   return (
-    <footer className="bg-background border-t border-border mt-auto">
-      <div className="container mx-auto px-4 py-8">
+    <footer className="bg-black text-white mt-auto">
+      <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
-          <div>
-            <h3 className="text-lg font-semibold text-primary mb-4">
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold">
               Slolan
             </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Profesionalna trgovina za predmete z velikimi količinami in konkurenčnimi cenami.
+            <p className="text-gray-300 text-sm leading-relaxed">
+              Profesionalna spletna trgovina za kakovostne izdelke po konkurenčnih cenah. 
+              Vaš zaupanja vreden partner za nakupovanje.
             </p>
+            <div className="flex space-x-3">
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Twitter className="h-5 w-5" />
+              </a>
+            </div>
           </div>
 
           {/* Quick Links */}
-          <div>
-            <h4 className="font-semibold mb-4">{t('common.more')}</h4>
-            <ul className="space-y-2 text-sm">
+          <div className="space-y-4">
+            <h4 className="font-semibold text-lg">Nakupovanje</h4>
+            <ul className="space-y-3 text-sm">
               <li>
-                <Link to="/categories" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('nav.categories')}
+                <Link to="/categories" className="text-gray-300 hover:text-white transition-colors">
+                  Kategorije
                 </Link>
               </li>
               <li>
-                <Link to="/products" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('nav.products')}
+                <Link to="/products" className="text-gray-300 hover:text-white transition-colors">
+                  Vsi izdelki
                 </Link>
               </li>
               <li>
-                <Link to="/products?status=novo" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('products.newProducts')}
+                <Link to="/products?status=novo" className="text-gray-300 hover:text-white transition-colors">
+                  Novi izdelki
                 </Link>
               </li>
               <li>
-                <Link to="/products?status=znizano" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('products.discountedProducts')}
+                <Link to="/products?status=znizano" className="text-gray-300 hover:text-white transition-colors">
+                  Akcijske ponudbe
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Categories */}
-          <div>
-            <h4 className="font-semibold mb-4">{t('nav.categories')}</h4>
-            <ul className="space-y-2 text-sm">
+          {/* Support */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-lg">Podpora</h4>
+            <ul className="space-y-3 text-sm">
               <li>
-                <Link to="/categories/elektronika" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('categories.electronics')}
-                </Link>
+                <a href="#" className="text-gray-300 hover:text-white transition-colors">
+                  Pogoji poslovanja
+                </a>
               </li>
               <li>
-                <Link to="/categories/oblacila" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('categories.clothing')}
-                </Link>
+                <a href="#" className="text-gray-300 hover:text-white transition-colors">
+                  Zasebnost
+                </a>
               </li>
               <li>
-                <Link to="/categories/nakit" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('categories.jewelry')}
-                </Link>
+                <a href="#" className="text-gray-300 hover:text-white transition-colors">
+                  Dostava in vračila
+                </a>
               </li>
               <li>
-                <Link to="/categories/vozila" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('categories.vehicles')}
-                </Link>
+                <a href="#" className="text-gray-300 hover:text-white transition-colors">
+                  Pogosta vprašanja
+                </a>
               </li>
             </ul>
           </div>
 
           {/* Contact */}
-          <div>
-            <h4 className="font-semibold mb-4">Kontakt</h4>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>Email: info@slolan.si</p>
-              <p>Telefon: +386 1 234 5678</p>
-              <p>Naslov: Ljubljana, Slovenija</p>
+          <div className="space-y-4">
+            <h4 className="font-semibold text-lg">Kontakt</h4>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center space-x-3 text-gray-300">
+                <Mail className="h-4 w-4 flex-shrink-0" />
+                <span>info@slolan.com</span>
+              </div>
+              <div className="flex items-center space-x-3 text-gray-300">
+                <Phone className="h-4 w-4 flex-shrink-0" />
+                <span>+386 1 234 5678</span>
+              </div>
+              <div className="flex items-center space-x-3 text-gray-300">
+                <MapPin className="h-4 w-4 flex-shrink-0" />
+                <span>Ljubljana, Slovenija</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-border mt-8 pt-4 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 Slolan. Vse pravice pridržane.</p>
+        <div className="border-t border-gray-800 mt-12 pt-8 text-center">
+          <p className="text-sm text-gray-400">
+            &copy; 2024 Slolan. Vse pravice pridržane. | Izdelano z ❤️ v Sloveniji
+          </p>
         </div>
       </div>
     </footer>

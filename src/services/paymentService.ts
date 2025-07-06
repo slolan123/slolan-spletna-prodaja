@@ -1,3 +1,4 @@
+
 export interface PaymentOrder {
   id: string;
   total: number;
@@ -52,7 +53,7 @@ export class MockNexiProvider extends PaymentProvider {
   }
 }
 
-// Real Nexi XPay CEE implementation
+// Real Nexi XPay CEE implementation using Supabase Edge Function
 export class RealNexiProvider extends PaymentProvider {
   private environment: string;
   
@@ -64,6 +65,25 @@ export class RealNexiProvider extends PaymentProvider {
   async createPaymentSession(order: PaymentOrder): Promise<PaymentSession> {
     try {
       console.log('🎯 RealNexiProvider.createPaymentSession called for order:', order.id);
+      console.log('📊 Order details:', {
+        id: order.id,
+        total: order.total,
+        currency: order.currency,
+        itemCount: order.items.length
+      });
+
+      // Validate order data before sending
+      if (!order || !order.id || !order.total || order.total <= 0) {
+        console.error('❌ Invalid order data:', order);
+        throw new Error('Neveljavni podatki naročila');
+      }
+
+      if (!order.items || order.items.length === 0) {
+        console.error('❌ No items in order:', order);
+        throw new Error('Naročilo nima izdelkov');
+      }
+
+      console.log('📤 Sending request to Supabase Edge Function...');
       
       // Call Supabase Edge Function for secure Nexi integration
       const response = await fetch('https://vkftjzirmhsyvtodxzxa.supabase.co/functions/v1/create-nexi-payment', {
@@ -75,35 +95,79 @@ export class RealNexiProvider extends PaymentProvider {
         body: JSON.stringify({ order })
       });
 
-      const data = await response.json();
-      
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Nexi payment session creation failed');
+      console.log('📥 Edge Function response status:', response.status);
+
+      // Get response text first to handle both JSON and text responses
+      const responseText = await response.text();
+      console.log('📥 Edge Function raw response:', responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ Failed to parse Edge Function response as JSON:', parseError);
+        console.error('📝 Raw response text:', responseText);
+        throw new Error(`Napaka pri komunikaciji s plačilnim sistemom: ${responseText.substring(0, 100)}`);
       }
 
-      console.log('✅ Nexi payment session created:', data.sessionId);
+      if (!response.ok) {
+        console.error('❌ Edge Function returned error:', data);
+        throw new Error(data.error || `HTTP ${response.status}: ${responseText}`);
+      }
+
+      if (!data.success) {
+        console.error('❌ Nexi payment session creation failed:', data);
+        throw new Error(data.error || 'Nexi session creation failed');
+      }
+
+      if (!data.redirectUrl) {
+        console.error('❌ No redirectUrl in successful response:', data);
+        throw new Error('Manjka povezava za preusmerjanje na plačilno stran');
+      }
+
+      console.log('✅ Nexi payment session created successfully:', {
+        sessionId: data.sessionId,
+        redirectUrl: data.redirectUrl.substring(0, 50) + '...'
+      });
       
       return {
         redirectUrl: data.redirectUrl,
-        sessionId: data.sessionId
+        sessionId: data.sessionId || `session_${Date.now()}`
       };
 
     } catch (error) {
-      console.error('❌ Nexi payment session creation error:', error);
-      throw error;
+      console.error('💥 RealNexiProvider.createPaymentSession error:', error);
+      
+      // Re-throw with more specific error message
+      if (error instanceof Error) {
+        throw new Error(`Napaka pri ustvarjanju plačilne seje: ${error.message}`);
+      } else {
+        throw new Error('Neznana napaka pri ustvarjanju plačilne seje');
+      }
     }
   }
 
   async verifyPayment(sessionId: string): Promise<PaymentResult> {
-    // For now, return success - webhook handles actual verification
-    return {
-      success: true,
-      transactionId: `nexi_${sessionId}_${Date.now()}`
-    };
+    try {
+      console.log('🔍 Verifying payment for session:', sessionId);
+      
+      // For now, return success - webhook handles actual verification
+      return {
+        success: true,
+        transactionId: `nexi_${sessionId}_${Date.now()}`
+      };
+    } catch (error) {
+      console.error('❌ Payment verification error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Payment verification failed'
+      };
+    }
   }
 }
 
 // Main factory function - returns real Nexi provider
 export const getPaymentProvider = (): PaymentProvider => {
+  console.log('🏭 Creating RealNexiProvider instance');
   return new RealNexiProvider('test');
 };

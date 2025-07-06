@@ -143,13 +143,16 @@ export default function Placilo() {
     }
 
     console.log('💳 Starting payment process for order:', order.id);
+    console.log('📊 Order total:', order.skupna_cena, 'EUR');
+    console.log('📦 Order items count:', order.artikli.length);
+    
     setProcessing(true);
     
     try {
       // Use real Nexi payment provider
       const paymentProvider = getPaymentProvider();
       
-      // Prepare order data for payment
+      // Prepare order data for payment with validation
       const paymentOrder = {
         id: order.id,
         total: order.skupna_cena,
@@ -161,16 +164,38 @@ export default function Placilo() {
         }))
       };
 
-      console.log('📄 Payment order prepared:', paymentOrder);
+      // Validate payment order before processing
+      if (!paymentOrder.id || !paymentOrder.total || paymentOrder.total <= 0) {
+        console.error('❌ Invalid payment order data:', paymentOrder);
+        throw new Error('Neveljavni podatki naročila za plačilo');
+      }
+
+      if (!paymentOrder.items || paymentOrder.items.length === 0) {
+        console.error('❌ No items in payment order:', paymentOrder);
+        throw new Error('Naročilo nima izdelkov za plačilo');
+      }
+
+      console.log('📄 Payment order prepared:', {
+        id: paymentOrder.id,
+        total: paymentOrder.total,
+        currency: paymentOrder.currency,
+        itemCount: paymentOrder.items.length
+      });
+
+      console.log('🚀 Creating payment session...');
 
       // Create payment session using real Nexi provider
       const paymentSession = await paymentProvider.createPaymentSession(paymentOrder);
 
-      console.log('📤 Nexi payment session response:', paymentSession);
+      console.log('📤 Payment session response received:', {
+        hasRedirectUrl: !!paymentSession.redirectUrl,
+        sessionId: paymentSession.sessionId,
+        redirectUrlStart: paymentSession.redirectUrl?.substring(0, 50) + '...'
+      });
 
-      if (!paymentSession.redirectUrl) {
-        console.error('❌ Nexi payment session creation failed');
-        throw new Error('Nexi payment session creation failed');
+      if (!paymentSession?.redirectUrl) {
+        console.error('❌ No redirect URL in payment session:', paymentSession);
+        throw new Error('Manjka povezava za preusmerjanje na plačilno stran');
       }
 
       // Store session info in order
@@ -208,9 +233,16 @@ export default function Placilo() {
 
     } catch (error) {
       console.error('💥 Payment initiation error:', error);
+      
+      let errorMessage = 'Prišlo je do napake pri inicializaciji plačila.';
+      if (error instanceof Error) {
+        console.error('💥 Error details:', error.message);
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Napaka pri plačilu',
-        description: error instanceof Error ? error.message : 'Prišlo je do napake pri inicializaciji plačila.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

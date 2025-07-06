@@ -30,13 +30,26 @@ serve(async (req) => {
 
     // Validate order data
     if (!order || !order.id || !order.total || order.total <= 0) {
+      console.error('❌ Invalid order data:', order)
       throw new Error('Invalid order data')
     }
 
+    // Check all required environment variables
     const NEXI_API_KEY = Deno.env.get('NEXI_API_KEY')
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    
     if (!NEXI_API_KEY) {
+      console.error('❌ Missing NEXI_API_KEY environment variable')
       throw new Error('Nexi API key not configured')
     }
+    
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ Missing Supabase environment variables')
+      throw new Error('Supabase configuration missing')
+    }
+
+    console.log('✅ All environment variables present')
 
     // Prepare Nexi XPay CEE request
     const nexiPayload = {
@@ -63,19 +76,39 @@ serve(async (req) => {
       body: JSON.stringify(nexiPayload),
     })
 
-    const nexiData = await nexiResponse.json()
+    console.log('📥 Nexi API response status:', nexiResponse.status)
     
-    console.log('📥 Nexi API response:', nexiData)
+    // Get response text first to handle errors properly
+    const responseText = await nexiResponse.text()
+    console.log('📥 Nexi API raw response:', responseText)
 
-    if (!nexiResponse.ok || !nexiData.redirectUrl) {
-      console.error('❌ Nexi API error:', nexiData)
-      throw new Error(nexiData.message || 'Nexi session creation failed')
+    let nexiData
+    try {
+      nexiData = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error('❌ Failed to parse Nexi response as JSON:', parseError)
+      console.error('📝 Raw response text:', responseText)
+      throw new Error(`Invalid Nexi API response: ${responseText.substring(0, 100)}`)
+    }
+    
+    console.log('📥 Nexi API parsed response:', nexiData)
+
+    if (!nexiResponse.ok) {
+      console.error('❌ Nexi API HTTP error:', {
+        status: nexiResponse.status,
+        statusText: nexiResponse.statusText,
+        data: nexiData
+      })
+      throw new Error(nexiData.message || nexiData.error || `Nexi API error: ${nexiResponse.status}`)
+    }
+
+    if (!nexiData.redirectUrl) {
+      console.error('❌ No redirectUrl in Nexi response:', nexiData)
+      throw new Error('Missing redirectUrl in Nexi response')
     }
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
     // Store session info in order
     const updateResult = await supabase
@@ -111,14 +144,30 @@ serve(async (req) => {
   } catch (error) {
     console.error('💥 Payment session creation error:', error)
     
+    // Determine appropriate status code
+    let statusCode = 500
+    let errorMessage = 'Payment session creation failed'
+    
+    if (error instanceof Error) {
+      errorMessage = error.message
+      
+      // Use 400 for validation errors, 500 for server errors
+      if (error.message.includes('Invalid order') || 
+          error.message.includes('Missing') ||
+          error.message.includes('not configured')) {
+        statusCode = 400
+      }
+    }
+    
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Payment session creation failed'
+        error: errorMessage,
+        details: error instanceof Error ? error.stack : String(error)
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: statusCode,
       },
     )
   }

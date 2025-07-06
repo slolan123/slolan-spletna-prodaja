@@ -198,26 +198,7 @@ export default function Placilo() {
         throw new Error('Manjka povezava za preusmerjanje na plačilno stran');
       }
 
-      // Store session info in order
-      console.log('💾 Storing session info in order...');
-      
-      const { error: updateError } = await supabase
-        .from('narocila')
-        .update({ 
-          opombe: JSON.stringify({ 
-            payment_session_id: paymentSession.sessionId,
-            payment_provider: 'nexi_xpay_cee',
-            session_created_at: new Date().toISOString()
-          })
-        })
-        .eq('id', order.id);
-
-      if (updateError) {
-        console.error('⚠️ Error updating order (non-critical):', updateError);
-        // Continue anyway, as payment session was created successfully
-      } else {
-        console.log('✅ Order updated with session info');
-      }
+      console.log('✅ Payment session created successfully, redirecting...');
       
       toast({
         title: 'Preusmerjanje na plačilo',
@@ -235,13 +216,27 @@ export default function Placilo() {
       console.error('💥 Payment initiation error:', error);
       
       let errorMessage = 'Prišlo je do napake pri inicializaciji plačila.';
+      let errorTitle = 'Napaka pri plačilu';
+      
       if (error instanceof Error) {
         console.error('💥 Error details:', error.message);
         errorMessage = error.message;
+        
+        // Provide more specific error messages
+        if (error.message.includes('Nexi session creation failed')) {
+          errorTitle = 'Napaka plačilnega sistema';
+          errorMessage = 'Plačilni sistem trenutno ni dostopen. Poskusite znova.';
+        } else if (error.message.includes('Invalid order') || error.message.includes('Neveljavni podatki')) {
+          errorTitle = 'Napaka podatkov';
+          errorMessage = 'Podatki naročila niso pravilni. Preverite košarico.';
+        } else if (error.message.includes('Missing') || error.message.includes('not configured')) {
+          errorTitle = 'Konfiguracija';
+          errorMessage = 'Plačilni sistem ni pravilno konfiguriran. Kontaktirajte podporo.';
+        }
       }
       
       toast({
-        title: 'Napaka pri plačilu',
+        title: errorTitle,
         description: errorMessage,
         variant: 'destructive',
       });

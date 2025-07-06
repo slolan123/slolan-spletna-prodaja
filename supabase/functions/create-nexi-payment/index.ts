@@ -39,6 +39,14 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
+    console.log('🔐 Environment check:', {
+      hasNexiKey: !!NEXI_API_KEY,
+      nexiKeyLength: NEXI_API_KEY?.length,
+      nexiKeyFirst10: NEXI_API_KEY?.substring(0, 10),
+      hasSupabaseUrl: !!SUPABASE_URL,
+      hasSupabaseKey: !!SUPABASE_SERVICE_ROLE_KEY
+    })
+    
     if (!NEXI_API_KEY) {
       console.error('❌ Missing NEXI_API_KEY environment variable')
       throw new Error('Nexi API key not configured')

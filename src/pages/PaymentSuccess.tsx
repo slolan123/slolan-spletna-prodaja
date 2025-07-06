@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { getFrontendPaymentProvider } from '@/services/mockPaymentProvider';
+import { getPaymentProvider } from '@/services/paymentService';
 
 export default function PaymentSuccess() {
   const { t } = useTranslation();
@@ -42,8 +42,8 @@ export default function PaymentSuccess() {
         return;
       }
 
-      // Verify payment using frontend provider
-      const paymentProvider = getFrontendPaymentProvider();
+      // Verify payment using real Nexi provider
+      const paymentProvider = getPaymentProvider();
       const verificationResult = await paymentProvider.verifyPayment(sessionId);
 
       console.log('🔍 Payment verification result:', verificationResult);

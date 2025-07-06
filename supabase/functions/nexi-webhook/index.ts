@@ -8,149 +8,76 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  console.log('🎣 Nexi Webhook called:', {
-    method: req.method,
-    url: req.url,
-    headers: Object.fromEntries(req.headers.entries())
-  });
-
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('✅ Handling CORS preflight for webhook');
-    return new Response(null, { 
-      status: 200,
-      headers: corsHeaders 
-    });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Validate environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const webhookData = await req.json()
     
-    console.log('🔑 Webhook environment check:', {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasServiceKey: !!supabaseServiceKey
-    });
+    console.log('🔔 Nexi webhook received:', JSON.stringify(webhookData, null, 2))
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Missing Supabase credentials for webhook');
-      return new Response(
-        JSON.stringify({ 
-          error: 'Server configuration error',
-          received: false
-        }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    // Extract transaction details
+    const shopTransactionId = webhookData.shopTransactionId
+    const status = webhookData.status
+    const transactionId = webhookData.transactionId
 
-    // Parse webhook body
-    let body;
-    try {
-      const bodyText = await req.text();
-      body = bodyText ? JSON.parse(bodyText) : {};
-    } catch (parseError) {
-      console.error('❌ Error parsing webhook body:', parseError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid JSON body',
-          received: false
-        }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-    
-    console.log('📨 Nexi Webhook Received:', body);
-    
-    // Process webhook - SAFEGUARD: Only update orders, never delete products
-    if (body.status === 'success' && body.sessionId) {
-      console.log('✅ Processing successful payment webhook');
-      
-      // Find order by session ID and update status
-      const { data: orders, error: selectError } = await supabaseClient
-        .from('narocila')
-        .select('*')
-        .like('opombe', `%${body.sessionId}%`);
-      
-      if (selectError) {
-        console.error('❌ Error finding order:', selectError);
-      } else if (orders && orders.length > 0) {
-        const order = orders[0];
-        console.log('📦 Found order to update:', order.id);
-        
-        // Parse existing opombe safely
-        let existingNotes = {};
-        try {
-          existingNotes = order.opombe ? JSON.parse(order.opombe) : {};
-        } catch (parseError) {
-          console.error('⚠️ Error parsing existing opombe:', parseError);
-          existingNotes = {};
-        }
-        
-        // SAFEGUARD: Only update order status, never touch product data
-        const { error: updateError } = await supabaseClient
-          .from('narocila')
-          .update({ 
-            status: 'potrjeno',
-            opombe: JSON.stringify({
-              ...existingNotes,
-              payment_confirmed: true,
-              transaction_id: body.transactionId || `txn_${Date.now()}`,
-              webhook_received_at: new Date().toISOString()
-            })
-          })
-          .eq('id', order.id);
-        
-        if (updateError) {
-          console.error('❌ Error updating order:', updateError);
-        } else {
-          console.log(`✅ Order ${order.id} marked as paid`);
-        }
-      } else {
-        console.log('⚠️ No order found for session ID:', body.sessionId);
+    if (shopTransactionId) {
+      console.log(`🔄 Processing webhook for order: ${shopTransactionId}, status: ${status}`)
+
+      // Update order status based on payment status
+      let orderStatus = 'oddano' // default
+      if (status === 'COMPLETED' || status === 'AUTHORIZED') {
+        orderStatus = 'potrjeno'
+      } else if (status === 'CANCELLED' || status === 'FAILED') {
+        orderStatus = 'preklicano'
       }
-    } else {
-      console.log('ℹ️ Webhook received but not processing (status not success or missing sessionId)');
+
+      // Update order in database
+      const { error } = await supabase
+        .from('narocila')
+        .update({
+          status: orderStatus,
+          opombe: JSON.stringify({
+            payment_status: status,
+            payment_transaction_id: transactionId,
+            payment_webhook_received: new Date().toISOString(),
+            payment_provider: 'nexi_xpay_cee'
+          })
+        })
+        .eq('id', shopTransactionId)
+
+      if (error) {
+        console.error('❌ Error updating order:', error)
+        throw error
+      }
+
+      console.log(`✅ Order ${shopTransactionId} updated with status: ${orderStatus}`)
     }
 
     return new Response(
-      JSON.stringify({ 
-        received: true,
-        processed: body.status === 'success' && body.sessionId,
-        timestamp: new Date().toISOString()
-      }),
-      { 
+      JSON.stringify({ received: true }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+      },
+    )
 
   } catch (error) {
-    console.error('💥 Webhook processing error:', {
-      name: error?.name,
-      message: error?.message,
-      stack: error?.stack
-    });
+    console.error('💥 Webhook processing error:', error)
     
     return new Response(
-      JSON.stringify({ 
-        error: 'Webhook processing failed',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        received: false,
-        timestamp: new Date().toISOString()
-      }),
-      { 
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+      },
+    )
   }
-});
+})

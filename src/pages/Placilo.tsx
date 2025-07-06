@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { getFrontendPaymentProvider } from '@/services/mockPaymentProvider';
+import { getPaymentProvider } from '@/services/paymentService';
 
 interface OrderItem {
   naziv: string;
@@ -146,8 +146,8 @@ export default function Placilo() {
     setProcessing(true);
     
     try {
-      // Use frontend mock payment provider instead of Edge functions
-      const paymentProvider = getFrontendPaymentProvider();
+      // Use real Nexi payment provider
+      const paymentProvider = getPaymentProvider();
       
       // Prepare order data for payment
       const paymentOrder = {
@@ -163,14 +163,14 @@ export default function Placilo() {
 
       console.log('📄 Payment order prepared:', paymentOrder);
 
-      // Create payment session using frontend provider
+      // Create payment session using real Nexi provider
       const paymentSession = await paymentProvider.createPaymentSession(paymentOrder);
 
-      console.log('📤 Payment session response:', paymentSession);
+      console.log('📤 Nexi payment session response:', paymentSession);
 
-      if (!paymentSession.success || !paymentSession.redirectUrl) {
-        console.error('❌ Payment session creation failed:', paymentSession.error);
-        throw new Error(paymentSession.error || 'Payment session creation failed');
+      if (!paymentSession.redirectUrl) {
+        console.error('❌ Nexi payment session creation failed');
+        throw new Error('Nexi payment session creation failed');
       }
 
       // Store session info in order
@@ -181,7 +181,7 @@ export default function Placilo() {
         .update({ 
           opombe: JSON.stringify({ 
             payment_session_id: paymentSession.sessionId,
-            payment_provider: 'frontend_mock_nexi',
+            payment_provider: 'nexi_xpay_cee',
             session_created_at: new Date().toISOString()
           })
         })
@@ -201,9 +201,9 @@ export default function Placilo() {
       
       console.log('🔄 Redirecting to:', paymentSession.redirectUrl);
       
-      // Redirect after a short delay
+      // Direct redirect to Nexi payment page
       setTimeout(() => {
-        navigate(paymentSession.redirectUrl);
+        window.location.href = paymentSession.redirectUrl;
       }, 1000);
 
     } catch (error) {

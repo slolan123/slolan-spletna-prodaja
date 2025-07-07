@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingCart, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +33,7 @@ interface ProductCardProps {
 
 export const ProductCard = ({ product }: ProductCardProps) => {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
@@ -103,6 +103,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
   const hasMultipleImages = product.slike_urls && product.slike_urls.length > 1;
 
+  const handleWishlistToggle = () => {
+    toggleWishlist(product.id);
+  };
+
+  const handleAddToCart = () => {
+    addToCart(product);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -112,11 +120,12 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     >
       <Card className="h-full flex flex-col bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300">
         <div className="relative aspect-square overflow-hidden bg-gray-50">
-          <Link to={productLink}>
+          <Link to={productLink} aria-label={`Poglej podrobnosti za ${getLocalizedName()}`}>
             <img
               src={displayImage}
               alt={getLocalizedName()}
               className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+              loading="lazy"
             />
             
             {/* Hover Overlay */}
@@ -134,7 +143,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           
           {/* Multiple Images Indicator */}
           {hasMultipleImages && (
-            <div className="absolute top-2 right-12 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+            <div className="absolute top-2 right-12 bg-black/70 text-white text-xs px-2 py-1 rounded-full" aria-label={`${product.slike_urls!.length} slik`}>
               +{product.slike_urls!.length - 1}
             </div>
           )}
@@ -143,78 +152,81 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <Button
             variant="ghost"
             size="sm"
-            className={`absolute top-2 right-2 h-8 w-8 p-0 rounded-full backdrop-blur transition-all duration-300 ${
-              inWishlist 
-                ? 'bg-red-500/90 text-white hover:bg-red-600/90' 
-                : 'bg-white/90 text-gray-700 hover:bg-white hover:text-red-500'
-            }`}
-            onClick={() => toggleWishlist(product.id)}
+            onClick={handleWishlistToggle}
+            className="absolute top-2 right-2 w-8 h-8 p-0 rounded-full bg-white/90 backdrop-blur hover:bg-white transition-colors"
+            aria-label={inWishlist ? `Odstrani ${getLocalizedName()} iz priljubljenih` : `Dodaj ${getLocalizedName()} med priljubljene`}
           >
-            <Heart className={`h-4 w-4 ${inWishlist ? 'fill-current' : ''}`} />
+            <Heart 
+              className={`h-4 w-4 transition-colors ${inWishlist ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
+            />
           </Button>
         </div>
 
-        <CardContent className="flex-1 p-4 space-y-3">
-          <Link to={productLink} className="block">
-            <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 hover:text-black transition-colors duration-300 leading-tight">
-              {getLocalizedName()}
-            </h3>
-          </Link>
-          
-          {/* Price Section */}
+        <CardContent className="flex-1 p-3 sm:p-4 space-y-2">
           <div className="space-y-1">
-            {product.popust && product.popust > 0 ? (
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 line-through">
-                    €{product.cena.toFixed(2)}
-                  </span>
-                  <Badge className="bg-red-500 text-white text-xs px-1 py-0">
-                    -{product.popust}%
-                  </Badge>
-                </div>
-                <div className="text-lg font-bold text-black">
-                  €{getFinalPrice().toFixed(2)}
-                </div>
-                {getSavings() > 0 && (
-                  <div className="text-xs text-green-600 font-medium">
-                    Prihranek: €{getSavings().toFixed(2)}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-lg font-bold text-black">
-                €{product.cena.toFixed(2)}
-              </div>
-            )}
+            <h3 className="font-semibold text-gray-900 line-clamp-2 leading-tight text-sm sm:text-base">
+              <Link to={productLink} className="hover:text-primary transition-colors">
+                {getLocalizedName()}
+              </Link>
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-500">Koda: {product.koda}</p>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-gray-600">
-            <span>#{product.koda}</span>
-            <span className={`font-medium ${product.zaloga > 0 ? 'text-green-600' : 'text-red-500'}`}>
-              {product.zaloga > 0 ? `${product.zaloga} kos` : 'Ni zaloge'}
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              {product.popust && product.popust > 0 ? (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg font-bold text-primary">
+                    €{getFinalPrice().toFixed(2)}
+                  </span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-xs sm:text-sm text-gray-500 line-through">
+                      €{product.cena.toFixed(2)}
+                    </span>
+                    <Badge variant="destructive" className="text-xs">
+                      -{product.popust}%
+                    </Badge>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-base sm:text-lg font-bold text-primary">
+                  €{product.cena.toFixed(2)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600">
+            <span className={product.zaloga > 0 ? 'text-green-600' : 'text-red-600'}>
+              {product.zaloga > 0 ? `${t('products.inStock')} (${product.zaloga})` : t('products.outOfStock')}
             </span>
           </div>
         </CardContent>
 
-        <CardFooter className="p-4 pt-0 flex gap-2">
-          <Button
-            className="flex-1 h-10 text-sm font-medium bg-black text-white hover:bg-gray-800 transition-colors"
-            onClick={() => addToCart(product)}
-            disabled={isOutOfStock}
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            {isOutOfStock ? 'Ni na zalogi' : 'V košarico'}
-          </Button>
-          
-          <Link to={productLink}>
+        <CardFooter className="p-3 sm:p-4 pt-0">
+          <div className="w-full space-y-2">
+            <Button 
+              onClick={handleAddToCart}
+              disabled={!product.na_voljo || product.zaloga === 0}
+              className="w-full h-10 text-sm"
+              aria-label={`Dodaj ${getLocalizedName()} v košarico`}
+            >
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">{t('products.addToCart')}</span>
+              <span className="sm:hidden">Dodaj</span>
+            </Button>
+            
             <Button 
               variant="outline" 
-              className="h-10 px-4 text-sm border-gray-300 hover:border-black hover:bg-gray-50 transition-colors"
+              onClick={() => navigate(productLink)}
+              className="w-full h-10 text-sm"
+              aria-label={`Poglej podrobnosti za ${getLocalizedName()}`}
             >
-              Več
+              <Eye className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">{t('products.details')}</span>
+              <span className="sm:hidden">Več</span>
             </Button>
-          </Link>
+          </div>
         </CardFooter>
       </Card>
     </motion.div>

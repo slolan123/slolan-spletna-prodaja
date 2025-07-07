@@ -304,11 +304,27 @@ CREATE INDEX idx_predmeti_kategorija ON public.predmeti(kategorija_id);
 CREATE INDEX idx_predmeti_status ON public.predmeti(status);
 CREATE INDEX idx_predmeti_koda ON public.predmeti(koda);
 CREATE INDEX idx_predmeti_seo_slug ON public.predmeti(seo_slug);
+CREATE INDEX idx_predmeti_cena ON public.predmeti(cena);
+CREATE INDEX idx_predmeti_zaloga ON public.predmeti(zaloga);
+CREATE INDEX idx_predmeti_na_voljo ON public.predmeti(na_voljo);
+CREATE INDEX idx_predmeti_created_at ON public.predmeti(created_at);
 CREATE INDEX idx_narocila_uporabnik ON public.narocila(uporabnik_id);
 CREATE INDEX idx_narocila_status ON public.narocila(status);
+CREATE INDEX idx_narocila_datum ON public.narocila(datum);
 CREATE INDEX idx_komentarji_izdelek ON public.komentarji(izdelek_id);
 CREATE INDEX idx_komentarji_odobreno ON public.komentarji(odobreno);
 CREATE INDEX idx_wishlist_uporabnik ON public.wishlist(uporabnik_id);
+CREATE INDEX idx_profiles_user_id ON public.profiles(user_id);
+CREATE INDEX idx_profiles_vloga ON public.profiles(vloga);
+
+-- Add additional constraints for data integrity
+ALTER TABLE public.predmeti ADD CONSTRAINT check_cena_positive CHECK (cena > 0);
+ALTER TABLE public.predmeti ADD CONSTRAINT check_zaloga_non_negative CHECK (zaloga >= 0);
+ALTER TABLE public.predmeti ADD CONSTRAINT check_popust_range CHECK (popust >= 0 AND popust <= 100);
+ALTER TABLE public.narocila ADD CONSTRAINT check_skupna_cena_positive CHECK (skupna_cena > 0);
+ALTER TABLE public.komentarji ADD CONSTRAINT check_ocena_range CHECK (ocena >= 1 AND ocena <= 5);
+ALTER TABLE public.kuponi ADD CONSTRAINT check_popust_positive CHECK (popust > 0);
+ALTER TABLE public.kuponi ADD CONSTRAINT check_veljavnost_order CHECK (veljavnost_do > veljavnost_od);
 
 -- Insert some sample categories
 INSERT INTO public.kategorije (naziv, naziv_en, naziv_de, naziv_it, naziv_ru, opis) VALUES

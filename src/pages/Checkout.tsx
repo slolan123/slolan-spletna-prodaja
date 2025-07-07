@@ -97,11 +97,87 @@ export default function Checkout() {
 
       if (error) throw error;
 
+      // 🔥 NEW: Update inventory immediately after order creation
+      console.log('📦 Updating inventory after order creation...');
+      try {
+        // Update product stock for each item
+        for (const item of artikli) {
+          if (item.id && item.quantity) {
+            console.log(`🔄 Updating stock for product ${item.id}: -${item.quantity}`);
+            
+            // Get current product stock first
+            const { data: product, error: fetchError } = await supabase
+              .from('predmeti')
+              .select('zaloga')
+              .eq('id', item.id)
+              .single();
+
+            if (fetchError) {
+              console.error(`❌ Error fetching product ${item.id} stock:`, fetchError);
+              continue;
+            }
+
+            // Update main product stock
+            const { error: productError } = await supabase
+              .from('predmeti')
+              .update({ 
+                zaloga: Math.max(0, (product?.zaloga || 0) - item.quantity),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', item.id);
+
+            if (productError) {
+              console.error(`❌ Error updating product ${item.id} stock:`, productError);
+            } else {
+              console.log(`✅ Product ${item.id} stock updated successfully`);
+            }
+          }
+        }
+
+        // Update variant stock for selected variants
+        for (const variant of selectedVariants) {
+          if (variant.product_id && variant.variant_id && variant.quantity) {
+            console.log(`🔄 Updating variant stock for ${variant.variant_id}: -${variant.quantity}`);
+            
+            // Get current variant stock first
+            const { data: variantData, error: fetchError } = await supabase
+              .from('product_variants')
+              .select('stock')
+              .eq('id', variant.variant_id)
+              .single();
+
+            if (fetchError) {
+              console.error(`❌ Error fetching variant ${variant.variant_id} stock:`, fetchError);
+              continue;
+            }
+
+            const { error: variantError } = await supabase
+              .from('product_variants')
+              .update({ 
+                stock: Math.max(0, (variantData?.stock || 0) - variant.quantity),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', variant.variant_id);
+
+            if (variantError) {
+              console.error(`❌ Error updating variant ${variant.variant_id} stock:`, variantError);
+            } else {
+              console.log(`✅ Variant ${variant.variant_id} stock updated successfully`);
+            }
+          }
+        }
+
+        console.log('✅ Inventory update completed successfully');
+      } catch (inventoryError) {
+        console.error('💥 Error during inventory update:', inventoryError);
+        // Don't fail the order creation for inventory errors, just log them
+      }
+
       clearCart();
 
       toast({
         title: t('checkout.orderSuccess'),
-        description: `Številka naročila: ${data.id.slice(0, 8)}`,
+        description: `Številka naročila: ${data.id.slice(-8)}`,
       });
 
       // Redirect to payment page instead of orders

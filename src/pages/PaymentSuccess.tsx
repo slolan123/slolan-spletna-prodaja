@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -13,7 +12,7 @@ import { getPaymentProvider } from '@/services/paymentService';
 
 export default function PaymentSuccess() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [processing, setProcessing] = useState(true);
@@ -26,6 +25,7 @@ export default function PaymentSuccess() {
   }, [user]);
 
   const processPaymentSuccess = async () => {
+    console.log('processPaymentSuccess zagnan');
     try {
       const sessionId = searchParams.get('session_id');
       const orderId = searchParams.get('order_id');
@@ -106,11 +106,118 @@ export default function PaymentSuccess() {
 
         if (updateError) throw updateError;
 
-        setOrderNumber(order.id.slice(0, 8));
+        // 🔥 NEW: Update inventory as backup (in case webhook fails)
+        console.log('📦 Updating inventory as backup...');
+        try {
+          // Parse artikli safely
+          let artikliArray = [];
+          try {
+            artikliArray = typeof order.artikli === 'string' 
+              ? JSON.parse(order.artikli) 
+              : Array.isArray(order.artikli) 
+              ? order.artikli 
+              : [];
+          } catch (parseError) {
+            console.error('❌ Error parsing artikli for inventory update:', parseError);
+            artikliArray = [];
+          }
+
+          // Parse selected variants
+          let selectedVariants = [];
+          try {
+            selectedVariants = typeof order.selected_variants === 'string'
+              ? JSON.parse(order.selected_variants)
+              : Array.isArray(order.selected_variants)
+              ? order.selected_variants
+              : [];
+          } catch (parseError) {
+            console.error('❌ Error parsing selected_variants for inventory update:', parseError);
+            selectedVariants = [];
+          }
+
+          console.log('📊 Backup inventory update data:', {
+            artikliCount: artikliArray.length,
+            variantsCount: selectedVariants.length
+          });
+
+          // Update product stock for each item
+          for (const item of artikliArray) {
+            if (item.id && item.quantity) {
+              console.log(`🔄 Backup updating stock for product ${item.id}: -${item.quantity}`);
+              
+              // Get current product stock first
+              const { data: product, error: fetchError } = await supabase
+                .from('predmeti')
+                .select('zaloga')
+                .eq('id', item.id)
+                .single();
+
+              if (fetchError) {
+                console.error(`❌ Error fetching product ${item.id} stock:`, fetchError);
+                continue;
+              }
+
+              // Update main product stock
+              const { error: productError } = await supabase
+                .from('predmeti')
+                .update({ 
+                  zaloga: Math.max(0, (product?.zaloga || 0) - item.quantity),
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', item.id);
+
+              if (productError) {
+                console.error(`❌ Error updating product ${item.id} stock:`, productError);
+              } else {
+                console.log(`✅ Product ${item.id} stock updated successfully`);
+              }
+            }
+          }
+
+          // Update variant stock for selected variants
+          for (const variant of selectedVariants) {
+            if (variant.product_id && variant.variant_id && variant.quantity) {
+              console.log(`🔄 Backup updating variant stock for ${variant.variant_id}: -${variant.quantity}`);
+              
+              // Get current variant stock first
+              const { data: variantData, error: fetchError } = await supabase
+                .from('product_variants')
+                .select('stock')
+                .eq('id', variant.variant_id)
+                .single();
+
+              if (fetchError) {
+                console.error(`❌ Error fetching variant ${variant.variant_id} stock:`, fetchError);
+                continue;
+              }
+
+              const { error: variantError } = await supabase
+                .from('product_variants')
+                .update({ 
+                  stock: Math.max(0, (variantData?.stock || 0) - variant.quantity),
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', variant.variant_id);
+
+              if (variantError) {
+                console.error(`❌ Error updating variant ${variant.variant_id} stock:`, variantError);
+              } else {
+                console.log(`✅ Variant ${variant.variant_id} stock updated successfully`);
+              }
+            }
+          }
+
+          console.log('✅ Backup inventory update completed successfully');
+        } catch (inventoryError) {
+          console.error('💥 Error during backup inventory update:', inventoryError);
+          // Don't fail the payment success for inventory errors, just log them
+        }
+
+        setOrderNumber(order.id.slice(-8));
         
         toast({
           title: 'Plačilo uspešno!',
-          description: `Vaše naročilo ${order.id.slice(0, 8)} je bilo uspešno plačano.`,
+          description: `Vaše naročilo ${order.id.slice(-8)} je bilo uspešno plačano.`,
         });
       } else {
         console.warn('No matching order found for session:', sessionId);

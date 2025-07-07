@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductCard } from '@/components/products/ProductCard';
 import { ProductFilters } from '@/components/products/ProductFilters';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface Product {
@@ -47,6 +48,7 @@ const PRODUCTS_PER_PAGE = 12;
 export default function Products() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [colors, setColors] = useState<string[]>([]);
@@ -67,12 +69,21 @@ export default function Products() {
     loadCategoriesAndColors();
   }, []);
 
-  // Set initial category from URL params
+  // Set initial filters from URL params
   useEffect(() => {
     const categoryParam = searchParams.get('category');
-    if (categoryParam) {
-      setSelectedCategory(categoryParam);
-    }
+    const searchParam = searchParams.get('search');
+    const statusParam = searchParams.get('status');
+    const colorParam = searchParams.get('color');
+    const minPriceParam = searchParams.get('minPrice');
+    const maxPriceParam = searchParams.get('maxPrice');
+
+    if (categoryParam) setSelectedCategory(categoryParam);
+    if (searchParam) setSearchTerm(searchParam);
+    if (statusParam) setSelectedStatus(statusParam);
+    if (colorParam) setSelectedColor(colorParam);
+    if (minPriceParam) setMinPrice(minPriceParam);
+    if (maxPriceParam) setMaxPrice(maxPriceParam);
   }, [searchParams]);
 
   // Load products when filters change - reset products and start fresh
@@ -82,6 +93,24 @@ export default function Products() {
     setPage(0);
     setHasMore(true);
     loadProducts(0, true); // Load from page 0 and reset
+  }, [searchTerm, selectedCategory, selectedStatus, selectedColor, minPrice, maxPrice]);
+
+  // Update URL params when filters change (but not on initial load)
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    const searchParam = searchParams.get('search');
+    const statusParam = searchParams.get('status');
+    const colorParam = searchParams.get('color');
+    const minPriceParam = searchParams.get('minPrice');
+    const maxPriceParam = searchParams.get('maxPrice');
+
+    // Only update URL if filters have actually changed from URL params
+    const hasURLParams = categoryParam || searchParam || statusParam || colorParam || minPriceParam || maxPriceParam;
+    const hasCurrentFilters = searchTerm || selectedCategory !== 'all' || selectedStatus !== 'all' || selectedColor !== 'all' || minPrice || maxPrice;
+    
+    if (hasCurrentFilters && !hasURLParams) {
+      updateURLParams();
+    }
   }, [searchTerm, selectedCategory, selectedStatus, selectedColor, minPrice, maxPrice]);
 
   const loadCategoriesAndColors = async () => {
@@ -190,6 +219,18 @@ export default function Products() {
     }
   };
 
+  const updateURLParams = () => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set('search', searchTerm);
+    if (selectedCategory !== 'all') params.set('category', selectedCategory);
+    if (selectedStatus !== 'all') params.set('status', selectedStatus);
+    if (selectedColor !== 'all') params.set('color', selectedColor);
+    if (minPrice) params.set('minPrice', minPrice);
+    if (maxPrice) params.set('maxPrice', maxPrice);
+    
+    navigate(`/products?${params.toString()}`, { replace: true });
+  };
+
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategory('all');
@@ -197,6 +238,7 @@ export default function Products() {
     setSelectedColor('all');
     setMinPrice('');
     setMaxPrice('');
+    navigate('/products', { replace: true });
   };
 
   const getActiveFiltersCount = () => {
@@ -211,24 +253,78 @@ export default function Products() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
       <div className="mb-8">
         <motion.h1 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-bold mb-4"
+          className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4"
         >
-          {t('products.title')}
+          {searchTerm ? `Rezultati iskanja za "${searchTerm}"` : t('products.title')}
         </motion.h1>
-        <p className="text-muted-foreground">
-          Odkrijte naš izbor kakovostnih izdelkov po odličnih cenah.
+        <p className="text-muted-foreground text-sm sm:text-base">
+          {searchTerm || getActiveFiltersCount() > 0 
+            ? `Najdenih ${products.length} izdelkov z izbranimi filtri`
+            : 'Odkrijte naš izbor kakovostnih izdelkov po odličnih cenah.'
+          }
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      {/* Active Filters and Search Results */}
+      {(searchTerm || selectedCategory !== 'all' || selectedStatus !== 'all' || selectedColor !== 'all' || minPrice || maxPrice) && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 bg-gray-50 rounded-lg border"
+        >
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="text-sm font-medium text-gray-700">Aktivni filtri:</span>
+            {searchTerm && (
+              <Badge variant="secondary" className="text-sm">
+                Iskanje: "{searchTerm}"
+              </Badge>
+            )}
+            {selectedCategory !== 'all' && (
+              <Badge variant="secondary" className="text-sm">
+                Kategorija: {categories.find(c => c.id === selectedCategory)?.naziv || selectedCategory}
+              </Badge>
+            )}
+            {selectedStatus !== 'all' && (
+              <Badge variant="secondary" className="text-sm">
+                Status: {selectedStatus === 'novo' ? 'Novo' : selectedStatus === 'znizano' ? 'Znizano' : 'Prodano'}
+              </Badge>
+            )}
+            {selectedColor !== 'all' && (
+              <Badge variant="secondary" className="text-sm">
+                Barva: {selectedColor}
+              </Badge>
+            )}
+            {(minPrice || maxPrice) && (
+              <Badge variant="secondary" className="text-sm">
+                Cena: {minPrice || '0'}€ - {maxPrice || '∞'}€
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">
+              Najdenih {products.length} izdelkov
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearFilters}
+              className="text-xs"
+            >
+              Počisti vse filtre
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-8">
         {/* Filters Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-4">
+        <div className="lg:col-span-1 order-1">
+          <div className="lg:sticky lg:top-4">
             <ProductFilters
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
@@ -251,9 +347,9 @@ export default function Products() {
         </div>
 
         {/* Products Grid */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 order-2">
           {loading && products.length === 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="space-y-4">
                   <Skeleton className="aspect-square rounded-lg" />
@@ -264,7 +360,7 @@ export default function Products() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

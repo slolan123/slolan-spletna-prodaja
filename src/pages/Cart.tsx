@@ -69,7 +69,7 @@ export default function Cart() {
               >
                 <Card className="shadow-lg border-0 rounded-2xl overflow-hidden">
                   <CardContent className="p-6">
-                    <div className="flex items-center gap-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
                       <div className="w-24 h-24 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
                         <img
                           src={item.slika_url || '/placeholder.svg'}
@@ -105,7 +105,7 @@ export default function Cart() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 mt-4 sm:mt-0">
                         <Button
                           variant="outline"
                           size="sm"
@@ -130,7 +130,7 @@ export default function Cart() {
                         </Button>
                       </div>
 
-                      <div className="text-right space-y-2">
+                      <div className="text-right space-y-2 mt-4 sm:mt-0">
                         <p className="font-bold text-xl text-gray-900">
                           €{(getFinalPrice(item.cena, item.popust) * item.quantity).toFixed(2)}
                         </p>

@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MultiImageUpload } from '@/components/admin/MultiImageUpload';
 import { ProductVariantManager } from '@/components/admin/ProductVariantManager';
+import { ImageUploadTest } from '@/components/admin/ImageUploadTest';
 
 interface Product {
   id: string;
@@ -199,12 +200,13 @@ const ProductForm = React.memo(({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium">Barva (osnovna)</label>
+          <label className="text-sm font-medium">Barva (osnovna) *</label>
           <Input
             value={formData.barva}
             onChange={(e) => handleInputChange('barva', e.target.value)}
-            placeholder="Barva izdelka (če ni barvnih različic)"
+            placeholder="Barva izdelka (obvezno)"
             autoComplete="off"
+            required
           />
         </div>
         <div>
@@ -406,6 +408,15 @@ export default function AdminProducts() {
       toast({
         title: "Napaka",
         description: "Masa ne more biti negativna.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!formData.barva.trim()) {
+      toast({
+        title: "Napaka",
+        description: "Barva izdelka je obvezna.",
         variant: "destructive",
       });
       return false;
@@ -675,6 +686,9 @@ export default function AdminProducts() {
         </Card>
       </div>
 
+      {/* Image Upload Test */}
+      <ImageUploadTest />
+
       {/* Controls */}
       <div className="flex justify-between items-center mb-6">
         <div className="relative w-full max-w-sm">
@@ -850,6 +864,8 @@ export default function AdminProducts() {
           {selectedProduct && (
             <ProductVariantManager 
               productId={selectedProduct.id}
+              productBaseColor={selectedProduct.barva || ''}
+              productBaseImages={selectedProduct.slike_urls || []}
               onVariantsChange={() => {
                 // Optionally refresh products list if needed
               }}

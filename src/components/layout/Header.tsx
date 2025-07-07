@@ -13,9 +13,8 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Settings, LogOut, ShoppingBag, Heart, Search, Menu } from 'lucide-react';
+import { User, Settings, LogOut, ShoppingBag, Heart, Menu } from 'lucide-react';
 import { LanguageSelector } from './LanguageSelector';
-import { Input } from '@/components/ui/input';
 import { CartIcon } from './CartIcon';
 
 export const Header = () => {
@@ -39,17 +38,8 @@ export const Header = () => {
             </Link>
           </div>
 
-          {/* Search Bar - Hidden on mobile */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Iščite izdelke..."
-                className="pl-10 w-full border-gray-200 focus:border-black focus:ring-black"
-              />
-            </div>
-          </div>
+          {/* Spacer for centering */}
+          <div className="hidden md:flex flex-1"></div>
 
           {/* Navigation and User Menu */}
           <div className="flex items-center space-x-4">
@@ -174,17 +164,7 @@ export const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Search */}
-        <div className="md:hidden mt-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Iščite izdelke..."
-              className="pl-10 w-full border-gray-200 focus:border-black focus:ring-black"
-            />
-          </div>
-        </div>
+
       </div>
     </header>
   );

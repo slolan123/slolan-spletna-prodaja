@@ -30,17 +30,67 @@ interface Product {
   seo_slug?: string;
 }
 
+interface Category {
+  id: string;
+  naziv: string;
+  naziv_en?: string;
+  naziv_de?: string;
+  naziv_it?: string;
+  naziv_ru?: string;
+  opis?: string;
+}
+
 const Index = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [newProducts, setNewProducts] = useState<Product[]>([]);
   const [saleProducts, setSaleProducts] = useState<Product[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadFeaturedProducts();
+    loadCategories();
   }, []);
+
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('kategorije')
+        .select('*')
+        .order('naziv')
+        .limit(4); // Show only 4 categories on homepage
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  };
+
+  const getLocalizedCategoryName = (category: Category) => {
+    const langKey = `naziv_${i18n.language}` as keyof Category;
+    return (category[langKey] as string) || category.naziv;
+  };
+
+  const getCategoryIcon = (categoryName: string) => {
+    const icons: { [key: string]: string } = {
+      'Elektronika': '📱',
+      'Electronics': '📱',
+      'Oblačila': '👔',
+      'Clothing': '👔',
+      'Nakit': '💍',
+      'Jewelry': '💍',
+      'Vozila': '🚗',
+      'Vehicles': '🚗',
+      'Oprema za dom': '🏠',
+      'Home & Garden': '🏠',
+      'Umetnost': '🎨',
+      'Art & Collectibles': '🎨'
+    };
+    return icons[categoryName] || '📦';
+  };
 
   const loadFeaturedProducts = async () => {
     try {
@@ -233,26 +283,21 @@ const Index = () => {
           </motion.div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { name: 'Elektronika', icon: '📱', href: '/categories/elektronika' },
-              { name: 'Oblačila', icon: '👔', href: '/categories/oblacila' },
-              { name: 'Nakit', icon: '💍', href: '/categories/nakit' },
-              { name: 'Vozila', icon: '🚗', href: '/categories/vozila' }
-            ].map((category, index) => (
+            {categories.map((category, index) => (
               <motion.div
-                key={category.name}
+                key={category.id}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <Link to={category.href}>
+                <Link to={`/products?category=${category.id}`}>
                   <Card className="h-full hover:shadow-lg transition-all duration-300 border border-gray-100 group">
                     <CardContent className="p-6 text-center">
                       <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">
-                        {category.icon}
+                        {getCategoryIcon(category.naziv)}
                       </div>
                       <h3 className="font-semibold text-black group-hover:text-gray-700 transition-colors">
-                        {category.name}
+                        {getLocalizedCategoryName(category)}
                       </h3>
                     </CardContent>
                   </Card>

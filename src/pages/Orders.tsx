@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -203,10 +202,9 @@ export default function Orders() {
                     </div>
                   </div>
 
-                  {order.opombe && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Opombe</h4>
-                      <p className="text-muted-foreground text-sm">{order.opombe}</p>
+                  {order.opombe && typeof order.opombe === 'string' && !order.opombe.trim().startsWith('{') && (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      <strong>Opombe:</strong> {order.opombe}
                     </div>
                   )}
                 </CardContent>

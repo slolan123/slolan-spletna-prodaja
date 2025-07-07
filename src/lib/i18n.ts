@@ -20,7 +20,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    lng: localStorage.getItem('language') || 'sl',
+    lng: typeof window !== 'undefined' && window.localStorage ? localStorage.getItem('language') || 'sl' : 'sl',
     fallbackLng: 'sl',
     interpolation: {
       escapeValue: false,

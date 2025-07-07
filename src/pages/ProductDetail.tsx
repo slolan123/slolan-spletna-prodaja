@@ -47,6 +47,7 @@ interface ColorVariant {
   images: string[];
   stock: number;
   available: boolean;
+  is_base?: boolean;
 }
 
 export default function ProductDetail() {
@@ -119,12 +120,21 @@ export default function ProductDetail() {
 
       if (error) throw error;
       
-      const variants = data || [];
+      // Sort variants - base color first, then alphabetically
+      const variants = (data || []).sort((a, b) => {
+        const aIsBase = (a as any).is_base || false;
+        const bIsBase = (b as any).is_base || false;
+        if (aIsBase && !bIsBase) return -1;
+        if (!aIsBase && bIsBase) return 1;
+        return a.color_name.localeCompare(b.color_name);
+      });
+      
       setColorVariants(variants);
       
-      // Auto-select first available variant
+      // Auto-select first available variant (prioritize base variant)
       if (variants.length > 0) {
-        const firstAvailable = variants.find(v => v.stock > 0) || variants[0];
+        const baseVariant = variants.find(v => (v as any).is_base && v.stock > 0);
+        const firstAvailable = baseVariant || variants.find(v => v.stock > 0) || variants[0];
         setSelectedVariant(firstAvailable);
       }
     } catch (error) {
@@ -485,7 +495,7 @@ export default function ProductDetail() {
               </Card>
             </div>
 
-            {/* Color Variant Selector */}
+            {/* Color Variant Selector - Always show if variants exist */}
             {colorVariants.length > 0 && (
               <ColorVariantSelector
                 variants={colorVariants}
@@ -500,13 +510,35 @@ export default function ProductDetail() {
             {/* Color (fallback for products without variants) */}
             {colorVariants.length === 0 && product.barva && (
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-gray-900">Barva</h3>
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  Barva
+                  <Star className="h-4 w-4 text-yellow-500" />
+                </h3>
                 <div className="flex items-center gap-3">
                   <div 
                     className="w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm" 
                     style={{ backgroundColor: product.barva.toLowerCase() }}
                   />
                   <span className="text-gray-700 font-medium capitalize">{product.barva}</span>
+                  <span className="text-sm text-gray-500">(osnovna barva)</span>
+                </div>
+              </div>
+            )}
+
+            {/* Show base color info even when variants exist */}
+            {colorVariants.length > 0 && product.barva && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  Osnovna barva izdelka
+                  <Star className="h-4 w-4 text-yellow-500" />
+                </h3>
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm" 
+                    style={{ backgroundColor: product.barva.toLowerCase() }}
+                  />
+                  <span className="text-gray-700 font-medium capitalize">{product.barva}</span>
+                  <span className="text-sm text-gray-500">(osnovna barva izdelka)</span>
                 </div>
               </div>
             )}

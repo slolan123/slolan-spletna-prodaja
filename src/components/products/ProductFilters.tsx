@@ -67,13 +67,13 @@ export const ProductFilters = ({
   ];
 
   return (
-    <div className="bg-card p-6 rounded-lg border space-y-4">
+    <div className="bg-card p-3 sm:p-4 md:p-6 rounded-lg border space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{t('common.filter')}</h3>
+        <h3 className="text-base sm:text-lg font-semibold">{t('common.filter')}</h3>
         {activeFiltersCount > 0 && (
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">{activeFiltersCount} filtrov</Badge>
-            <Button variant="ghost" size="sm" onClick={onClearFilters}>
+            <Badge variant="secondary" className="text-xs">{activeFiltersCount} filtrov</Badge>
+            <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-xs">
               Počisti
             </Button>
           </div>
@@ -93,9 +93,9 @@ export const ProductFilters = ({
 
       {/* Category Filter */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">{t('nav.categories')}</label>
+        <label className="text-xs sm:text-sm font-medium">{t('nav.categories')}</label>
         <Select value={selectedCategory} onValueChange={onCategoryChange}>
-          <SelectTrigger>
+          <SelectTrigger className="text-xs sm:text-sm">
             <SelectValue placeholder="Izberi kategorijo" />
           </SelectTrigger>
           <SelectContent>
@@ -111,9 +111,9 @@ export const ProductFilters = ({
 
       {/* Status Filter */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">Status</label>
+        <label className="text-xs sm:text-sm font-medium">Status</label>
         <Select value={selectedStatus} onValueChange={onStatusChange}>
-          <SelectTrigger>
+          <SelectTrigger className="text-xs sm:text-sm">
             <SelectValue placeholder="Izberi status" />
           </SelectTrigger>
           <SelectContent>
@@ -129,9 +129,9 @@ export const ProductFilters = ({
       {/* Color Filter */}
       {colors.length > 0 && (
         <div className="space-y-2">
-          <label className="text-sm font-medium">{t('products.color')}</label>
+          <label className="text-xs sm:text-sm font-medium">{t('products.color')}</label>
           <Select value={selectedColor} onValueChange={onColorChange}>
-            <SelectTrigger>
+            <SelectTrigger className="text-xs sm:text-sm">
               <SelectValue placeholder="Izberi barvo" />
             </SelectTrigger>
             <SelectContent>
@@ -148,8 +148,8 @@ export const ProductFilters = ({
 
       {/* Price Range */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">{t('products.price')}</label>
-        <div className="flex gap-2">
+        <label className="text-xs sm:text-sm font-medium">{t('products.price')}</label>
+        <div className="grid grid-cols-2 gap-2">
           <Input
             type="number"
             placeholder={t('common.from')}
@@ -157,6 +157,7 @@ export const ProductFilters = ({
             onChange={(e) => onMinPriceChange(e.target.value)}
             min="0"
             step="0.01"
+            className="text-xs sm:text-sm"
           />
           <Input
             type="number"
@@ -165,6 +166,7 @@ export const ProductFilters = ({
             onChange={(e) => onMaxPriceChange(e.target.value)}
             min="0"
             step="0.01"
+            className="text-xs sm:text-sm"
           />
         </div>
       </div>

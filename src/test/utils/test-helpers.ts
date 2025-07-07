@@ -17,18 +17,26 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
     },
   })
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>
-              {children}
-            </WishlistProvider>
-          </CartProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+  return React.createElement(
+    QueryClientProvider,
+    { client: queryClient },
+    React.createElement(
+      BrowserRouter,
+      null,
+      React.createElement(
+        AuthProvider,
+        null,
+        React.createElement(
+          CartProvider,
+          null,
+          React.createElement(
+            WishlistProvider,
+            null,
+            children
+          )
+        )
+      )
+    )
   )
 }
 

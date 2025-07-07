@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +25,11 @@ export default function Checkout() {
     naslov_dostave: '',
     telefon_kontakt: '',
     opombe: '',
+    customer_type: 'personal' as 'personal' | 'business',
+    company_name: '',
+    company_address: '',
+    company_vat: '',
+    company_email: '',
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -47,6 +53,16 @@ export default function Checkout() {
       toast({
         title: t('errors.invalidData'),
         description: 'Izpolnite vsa obvezna polja',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate business customer fields
+    if (formData.customer_type === 'business' && (!formData.company_name || !formData.company_address || !formData.company_vat || !formData.company_email)) {
+      toast({
+        title: t('errors.invalidData'),
+        description: 'Izpolnite vsa podjetniška polja',
         variant: 'destructive',
       });
       return;
@@ -90,7 +106,12 @@ export default function Checkout() {
           naslov_dostave: formData.naslov_dostave,
           telefon_kontakt: formData.telefon_kontakt,
           opombe: formData.opombe || null,
-          selected_variants: selectedVariants
+          selected_variants: selectedVariants,
+          customer_type: formData.customer_type,
+          company_name: formData.customer_type === 'business' ? formData.company_name : null,
+          company_address: formData.customer_type === 'business' ? formData.company_address : null,
+          company_vat: formData.customer_type === 'business' ? formData.company_vat : null,
+          company_email: formData.customer_type === 'business' ? formData.company_email : null,
         })
         .select()
         .single();
@@ -288,6 +309,102 @@ export default function Checkout() {
                       required
                       className="h-12 rounded-xl border-2 focus:border-primary"
                     />
+                  </div>
+
+                  {/* Business Customer Checkbox */}
+                  <div className="space-y-4 border-t pt-6">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="business-customer"
+                        checked={formData.customer_type === 'business'}
+                        onCheckedChange={(checked) => {
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            customer_type: checked ? 'business' : 'personal',
+                            // Clear business fields when unchecked
+                            ...(checked ? {} : {
+                              company_name: '',
+                              company_address: '',
+                              company_vat: '',
+                              company_email: ''
+                            })
+                          }));
+                        }}
+                      />
+                      <Label htmlFor="business-customer" className="text-lg font-semibold text-gray-900">
+                        🏢 Kupujem kot podjetje
+                      </Label>
+                    </div>
+
+                    {formData.customer_type === 'business' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-4 bg-blue-50 p-4 rounded-xl"
+                      >
+                        <div className="space-y-2">
+                          <Label htmlFor="company_name" className="text-sm font-semibold text-gray-900">
+                            Ime podjetja *
+                          </Label>
+                          <Input
+                            id="company_name"
+                            name="company_name"
+                            value={formData.company_name}
+                            onChange={handleInputChange}
+                            placeholder="Naziv podjetja"
+                            required={formData.customer_type === 'business'}
+                            className="h-11 rounded-lg border-2 focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="company_address" className="text-sm font-semibold text-gray-900">
+                            Naslov podjetja *
+                          </Label>
+                          <Input
+                            id="company_address"
+                            name="company_address"
+                            value={formData.company_address}
+                            onChange={handleInputChange}
+                            placeholder="Polni naslov podjetja"
+                            required={formData.customer_type === 'business'}
+                            className="h-11 rounded-lg border-2 focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="company_vat" className="text-sm font-semibold text-gray-900">
+                            Davčna številka (DDV) *
+                          </Label>
+                          <Input
+                            id="company_vat"
+                            name="company_vat"
+                            value={formData.company_vat}
+                            onChange={handleInputChange}
+                            placeholder="SI12345678"
+                            required={formData.customer_type === 'business'}
+                            className="h-11 rounded-lg border-2 focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="company_email" className="text-sm font-semibold text-gray-900">
+                            E-pošta podjetja *
+                          </Label>
+                          <Input
+                            id="company_email"
+                            name="company_email"
+                            type="email"
+                            value={formData.company_email}
+                            onChange={handleInputChange}
+                            placeholder="info@podjetje.si"
+                            required={formData.customer_type === 'business'}
+                            className="h-11 rounded-lg border-2 focus:border-blue-500"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
 
                   <div className="space-y-2">

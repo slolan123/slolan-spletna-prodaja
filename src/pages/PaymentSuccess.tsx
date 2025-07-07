@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { getPaymentProvider } from '@/services/paymentService';
+import { Download } from 'lucide-react';
 
 export default function PaymentSuccess() {
   const { t } = useTranslation();
@@ -17,12 +18,49 @@ export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const [processing, setProcessing] = useState(true);
   const [orderNumber, setOrderNumber] = useState<string>('');
+  const [currentOrderId, setCurrentOrderId] = useState<string>('');
 
   useEffect(() => {
     if (user) {
       processPaymentSuccess();
     }
   }, [user]);
+
+  const downloadInvoice = async () => {
+    if (!currentOrderId || !session) return;
+
+    try {
+      const response = await supabase.functions.invoke('generate-invoice', {
+        body: null,
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      // Open the invoice in a new tab for printing/saving as PDF
+      const invoiceUrl = `https://vkftjzirlmhsyvtodxzxa.supabase.co/functions/v1/generate-invoice?orderId=${currentOrderId}`;
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.location.href = invoiceUrl;
+      }
+
+      toast({
+        title: 'Račun generiran',
+        description: 'Račun se odpira v novem oknu. Lahko ga natisnete ali shranite kot PDF.',
+      });
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast({
+        title: 'Napaka',
+        description: 'Prišlo je do napake pri generiranju računa.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const processPaymentSuccess = async () => {
     console.log('processPaymentSuccess zagnan');
@@ -214,6 +252,7 @@ export default function PaymentSuccess() {
         }
 
         setOrderNumber(order.id.slice(-8));
+        setCurrentOrderId(order.id);
         
         toast({
           title: 'Plačilo uspešno!',
@@ -314,6 +353,17 @@ export default function PaymentSuccess() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  {currentOrderId && (
+                    <Button
+                      onClick={downloadInvoice}
+                      size="lg"
+                      className="rounded-xl bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Download className="mr-2 h-5 w-5" />
+                      Prenesi račun (PDF)
+                    </Button>
+                  )}
+                  
                   <Button
                     onClick={() => navigate('/orders')}
                     size="lg"

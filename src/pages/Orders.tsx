@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Package, Calendar, CreditCard, MapPin } from 'lucide-react';
+import { Package, Calendar, CreditCard, MapPin, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 interface Order {
   id: string;
@@ -22,9 +24,34 @@ interface Order {
 
 export default function Orders() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const downloadInvoice = async (orderId: string) => {
+    if (!session) return;
+
+    try {
+      // Open the invoice directly in a new tab
+      const invoiceUrl = `https://vkftjzirlmhsyvtodxzxa.supabase.co/functions/v1/generate-invoice?orderId=${orderId}`;
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.location.href = invoiceUrl;
+      }
+
+      toast({
+        title: 'Račun generiran',
+        description: 'Račun se odpira v novem oknu. Lahko ga natisnete ali shranite kot PDF.',
+      });
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast({
+        title: 'Napaka',
+        description: 'Prišlo je do napake pri generiranju računa.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -205,6 +232,21 @@ export default function Orders() {
                   {order.opombe && typeof order.opombe === 'string' && !order.opombe.trim().startsWith('{') && (
                     <div className="mt-2 text-sm text-muted-foreground">
                       <strong>Opombe:</strong> {order.opombe}
+                    </div>
+                  )}
+
+                  {/* Download Invoice Button - only for completed/confirmed orders */}
+                  {(order.status === 'potrjeno' || order.status === 'poslano' || order.status === 'dostavljeno') && (
+                    <div className="pt-4 border-t">
+                      <Button
+                        onClick={() => downloadInvoice(order.id)}
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Prenesi račun (PDF)
+                      </Button>
                     </div>
                   )}
                 </CardContent>

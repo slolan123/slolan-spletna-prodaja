@@ -154,6 +154,11 @@ export type Database = {
       narocila: {
         Row: {
           artikli: Json
+          company_address: string | null
+          company_email: string | null
+          company_name: string | null
+          company_vat: string | null
+          customer_type: string | null
           datum: string
           id: string
           naslov_dostave: string
@@ -167,6 +172,11 @@ export type Database = {
         }
         Insert: {
           artikli: Json
+          company_address?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_vat?: string | null
+          customer_type?: string | null
           datum?: string
           id?: string
           naslov_dostave: string
@@ -180,6 +190,11 @@ export type Database = {
         }
         Update: {
           artikli?: Json
+          company_address?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_vat?: string | null
+          customer_type?: string | null
           datum?: string
           id?: string
           naslov_dostave?: string

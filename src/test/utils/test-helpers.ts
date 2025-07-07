@@ -1,8 +1,9 @@
+
 import { render, RenderOptions } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { CartProvider } from '@/contexts/CartContext'
-import { WishlistProvider } from '@/contexts/WishlistContext'
+import { WishlistProvider } from '@/contexts/WishlistProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 
@@ -154,4 +155,4 @@ export const mockApiError = (endpoint: string, error: any) => {
 }
 
 // Export custom render
-export { customRender as render } 
+export { customRender as render }

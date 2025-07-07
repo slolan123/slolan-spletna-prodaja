@@ -70,7 +70,7 @@ test.describe('Performance Tests', () => {
     await page.waitForLoadState('networkidle')
     
     // Check image loading performance
-    const imageLoadTimes = await page.evaluate() => {
+    const imageLoadTimes = await page.evaluate(() => {
       const images = document.querySelectorAll('img')
       return Array.from(images).map(img => {
         const rect = img.getBoundingClientRect()
@@ -123,4 +123,4 @@ test.describe('Performance Tests', () => {
     const totalSize = resourceSizes.reduce((sum, resource) => sum + resource.size, 0)
     expect(totalSize).toBeLessThan(2 * 1024 * 1024) // Less than 2MB
   })
-}) 
+})

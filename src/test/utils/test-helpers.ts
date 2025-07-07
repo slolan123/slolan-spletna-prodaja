@@ -3,9 +3,10 @@ import { render, RenderOptions } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { CartProvider } from '@/contexts/CartContext'
-import { WishlistProvider } from '@/contexts/WishlistProvider'
+import { WishlistProvider } from '@/contexts/WishlistContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
+import { vi } from 'vitest'
 
 // Test wrapper with all providers
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
@@ -136,7 +137,7 @@ export const submitForm = async (formSelector: string) => {
 // API mocking utilities
 export const mockApiResponse = (endpoint: string, response: any) => {
   // Mock fetch for specific endpoint
-  global.fetch = jest.fn().mockImplementation((url) => {
+  global.fetch = vi.fn().mockImplementation((url) => {
     if (url.includes(endpoint)) {
       return Promise.resolve({
         ok: true,
@@ -151,7 +152,7 @@ export const mockApiResponse = (endpoint: string, response: any) => {
 }
 
 export const mockApiError = (endpoint: string, error: any) => {
-  global.fetch = jest.fn().mockImplementation((url) => {
+  global.fetch = vi.fn().mockImplementation((url) => {
     if (url.includes(endpoint)) {
       return Promise.reject(error)
     }

@@ -1,3 +1,4 @@
+
 import { test, expect } from '@playwright/test'
 
 test.describe('Shopping Flow', () => {
@@ -141,7 +142,8 @@ test.describe('Shopping Flow', () => {
     // 2. Verify reasonable load time (under 3 seconds)
     expect(loadTime).toBeLessThan(3000)
     
-    // 3. Check for images loading
-    await expect(page.locator('img')).toHaveCount.greaterThan(0)
+    // 3. Check for images loading - use count instead of greaterThan
+    const imageCount = await page.locator('img').count()
+    expect(imageCount).toBeGreaterThan(0)
   })
 }) 

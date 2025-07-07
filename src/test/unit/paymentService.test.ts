@@ -1,3 +1,4 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getPaymentProvider, RealNexiProvider, MockNexiProvider } from '@/services/paymentService'
 
@@ -26,6 +27,12 @@ const mockOrder = {
       price: 25.50
     }
   ]
+}
+
+interface PaymentSessionResult {
+  success: boolean
+  redirectUrl: string
+  sessionId: string
 }
 
 describe('PaymentService', () => {
@@ -77,7 +84,7 @@ describe('PaymentService', () => {
     })
 
     it('creates payment session successfully', async () => {
-      const mockResponse = {
+      const mockResponse: PaymentSessionResult = {
         success: true,
         redirectUrl: 'https://test-payment.com/checkout',
         sessionId: 'session_123'
@@ -88,7 +95,7 @@ describe('PaymentService', () => {
         json: async () => mockResponse
       } as Response)
 
-      const result = await provider.createPaymentSession(mockOrder)
+      const result = await provider.createPaymentSession(mockOrder) as PaymentSessionResult
       
       expect(result.redirectUrl).toBe('https://test-payment.com/checkout')
       expect(result.sessionId).toBe('session_123')
@@ -121,7 +128,7 @@ describe('PaymentService', () => {
     })
 
     it('creates mock payment session', async () => {
-      const result = await provider.createPaymentSession(mockOrder)
+      const result = await provider.createPaymentSession(mockOrder) as PaymentSessionResult
       
       expect(result.success).toBe(true)
       expect(result.redirectUrl).toContain('/payment-success')

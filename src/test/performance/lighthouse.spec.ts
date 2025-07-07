@@ -1,4 +1,19 @@
+
 import { test, expect } from '@playwright/test'
+
+interface LighthouseResult {
+  performance: number
+  accessibility: number
+  bestPractices: number
+  seo: number
+  loadTime: number
+}
+
+interface ResourceInfo {
+  name: string
+  size: number
+  duration: number
+}
 
 test.describe('Performance Tests', () => {
   test('homepage performance score', async ({ page }) => {
@@ -6,7 +21,7 @@ test.describe('Performance Tests', () => {
     await page.goto('/')
     
     // Run Lighthouse audit
-    const lighthouse = await page.evaluate(() => {
+    const lighthouse = await page.evaluate((): Promise<LighthouseResult> => {
       return new Promise((resolve) => {
         // This is a simplified version - in real implementation you'd use lighthouse CLI
         const startTime = performance.now()
@@ -55,7 +70,7 @@ test.describe('Performance Tests', () => {
     await page.waitForLoadState('networkidle')
     
     // Check image loading performance
-    const imageLoadTimes = await page.evaluate(() => {
+    const imageLoadTimes = await page.evaluate() => {
       const images = document.querySelectorAll('img')
       return Array.from(images).map(img => {
         const rect = img.getBoundingClientRect()
@@ -92,13 +107,16 @@ test.describe('Performance Tests', () => {
     await page.goto('/')
     
     // Get resource sizes
-    const resourceSizes = await page.evaluate(() => {
+    const resourceSizes = await page.evaluate((): ResourceInfo[] => {
       const resources = performance.getEntriesByType('resource')
-      return resources.map(resource => ({
-        name: resource.name,
-        size: resource.transferSize || 0,
-        duration: resource.duration
-      }))
+      return resources.map(resource => {
+        const resourceWithSize = resource as PerformanceResourceTiming
+        return {
+          name: resource.name,
+          size: resourceWithSize.transferSize || 0,
+          duration: resource.duration
+        }
+      })
     })
     
     // Check total bundle size

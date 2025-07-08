@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -93,15 +92,21 @@ export const Footer = () => {
             <div className="space-y-3 text-sm">
               <div className="flex items-center space-x-3 text-gray-300">
                 <Mail className="h-4 w-4 flex-shrink-0" />
-                <span>info@slolan.com</span>
+                <span>loziceprodaja@gmail.com</span>
               </div>
               <div className="flex items-center space-x-3 text-gray-300">
                 <Phone className="h-4 w-4 flex-shrink-0" />
-                <span>+386 1 234 5678</span>
+                <span>+386 040 232500</span>
               </div>
               <div className="flex items-center space-x-3 text-gray-300">
                 <MapPin className="h-4 w-4 flex-shrink-0" />
-                <span>Ljubljana, Slovenija</span>
+                <span>Ložice 8, 5210 Deskle</span>
+              </div>
+              <div className="text-xs text-gray-400 mt-2">
+                <p>SIVAR D.O.O.</p>
+                <p>Matična: 3507939000</p>
+                <p>DDV: SI23998547</p>
+                <p>TRR: SI56 1910 0001 0297 574</p>
               </div>
             </div>
           </div>

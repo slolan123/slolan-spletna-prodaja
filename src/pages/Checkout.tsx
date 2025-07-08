@@ -30,6 +30,7 @@ export default function Checkout() {
     company_address: '',
     company_vat: '',
     company_email: '',
+    payment_method: 'card' as 'card' | 'predracun',
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -96,6 +97,13 @@ export default function Checkout() {
           quantity: item.quantity
         }));
 
+      // Prepare additional notes for proforma invoice orders
+      let additionalNotes = formData.opombe || '';
+      
+      if (formData.customer_type === 'business' && formData.payment_method === 'predracun') {
+        additionalNotes = `PLAČILO PO PREDRAČUNU - TRR: SI56 1910 0001 0297 574\n${additionalNotes}`;
+      }
+
       const { data, error } = await supabase
         .from('narocila')
         .insert({
@@ -105,13 +113,14 @@ export default function Checkout() {
           status: 'oddano',
           naslov_dostave: formData.naslov_dostave,
           telefon_kontakt: formData.telefon_kontakt,
-          opombe: formData.opombe || null,
+          opombe: additionalNotes || null,
           selected_variants: selectedVariants,
           customer_type: formData.customer_type,
           company_name: formData.customer_type === 'business' ? formData.company_name : null,
           company_address: formData.customer_type === 'business' ? formData.company_address : null,
           company_vat: formData.customer_type === 'business' ? formData.company_vat : null,
           company_email: formData.customer_type === 'business' ? formData.company_email : null,
+          payment_method: formData.customer_type === 'business' ? formData.payment_method : 'card',
         })
         .select()
         .single();
@@ -195,6 +204,19 @@ export default function Checkout() {
       }
 
       clearCart();
+
+      // Handle different payment methods
+      if (formData.customer_type === 'business' && formData.payment_method === 'predracun') {
+        // Show bank transfer details for proforma invoice
+        toast({
+          title: 'Naročilo uspešno oddano',
+          description: `Podatki za nakazilo:\n\nPrejemnik: SIVAR D.O.O.\nTRR: SI56 1910 0001 0297 574\nZnesek: €${getTotalPrice().toFixed(2)}\nSklic: SI00 ${data.id.slice(-8)}\nNamen: Plačilo naročila #${data.id.slice(-8)}\nMatična: 3507939000\nDavčna: SI23998547`,
+          variant: 'default',
+          duration: 20000,
+        });
+        navigate('/orders');
+        return;
+      }
 
       toast({
         title: t('checkout.orderSuccess'),
@@ -402,6 +424,32 @@ export default function Checkout() {
                             required={formData.customer_type === 'business'}
                             className="h-11 rounded-lg border-2 focus:border-blue-500"
                           />
+                        </div>
+
+                        <div className="space-y-4">
+                          <Label className="text-lg font-semibold text-gray-900">Način plačila *</Label>
+                          <div className="flex flex-col gap-2">
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="payment_method"
+                                value="card"
+                                checked={formData.payment_method === 'card'}
+                                onChange={() => setFormData(prev => ({ ...prev, payment_method: 'card' }))}
+                              />
+                              Plačilo s kartico (Nexi)
+                            </label>
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name="payment_method"
+                                value="predracun"
+                                checked={formData.payment_method === 'predracun'}
+                                onChange={() => setFormData(prev => ({ ...prev, payment_method: 'predracun' }))}
+                              />
+                              Plačilo po predračunu (TRR)
+                            </label>
+                          </div>
                         </div>
                       </motion.div>
                     )}

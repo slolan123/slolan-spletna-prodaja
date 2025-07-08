@@ -138,7 +138,12 @@ export default function AdminOrders() {
     }
   };
 
-  const getStatusBadge = (status: Order['status']) => {
+  const getStatusBadge = (status: Order['status'], opombe?: string) => {
+    // Check if this is a proforma invoice order
+    if (opombe && opombe.includes('PLAČILO PO PREDRAČUNU')) {
+      return <Badge variant="secondary">Predračun</Badge>;
+    }
+
     const statusMap = {
       oddano: { label: 'Oddano', variant: 'secondary' as const },
       potrjeno: { label: 'Potrjeno', variant: 'default' as const },
@@ -310,7 +315,7 @@ export default function AdminOrders() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-2">
-                      {getStatusBadge(order.status)}
+                      {getStatusBadge(order.status, order.opombe)}
                       <Select
                         value={order.status}
                         onValueChange={(value: Order['status']) => handleStatusChange(order.id, value)}
@@ -381,7 +386,7 @@ export default function AdminOrders() {
                   <h4 className="font-semibold mb-2">Informacije o naročilu</h4>
                   <div className="space-y-2 text-sm">
                     <div>Datum: {formatDate(selectedOrder.datum)}</div>
-                    <div>Status: {getStatusBadge(selectedOrder.status)}</div>
+                    <div>Status: {getStatusBadge(selectedOrder.status, selectedOrder.opombe)}</div>
                     <div>Skupna cena: €{selectedOrder.skupna_cena.toFixed(2)}</div>
                   </div>
                 </div>

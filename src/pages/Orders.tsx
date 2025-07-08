@@ -92,17 +92,34 @@ export default function Orders() {
     }
   };
 
-  const getStatusBadge = (status: Order['status']) => {
-    const statusMap = {
-      oddano: { label: 'Oddano', variant: 'secondary' as const },
-      potrjeno: { label: 'Potrjeno', variant: 'default' as const },
-      poslano: { label: 'Poslano', variant: 'default' as const },
-      dostavljeno: { label: 'Dostavljeno', variant: 'default' as const },
-      preklicano: { label: 'Preklicano', variant: 'destructive' as const },
+  const getStatusBadge = (status: string, opombe?: string) => {
+    // Check if this is a proforma invoice order
+    if (opombe && opombe.includes('PLAČILO PO PREDRAČUNU')) {
+      return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Predračun</span>;
+    }
+
+    const statusMap: { [key: string]: string } = {
+      oddano: 'bg-yellow-100 text-yellow-800',
+      potrjeno: 'bg-blue-100 text-blue-800',
+      poslano: 'bg-purple-100 text-purple-800',
+      dostavljeno: 'bg-green-100 text-green-800',
+      preklicano: 'bg-red-100 text-red-800',
     };
 
-    const statusInfo = statusMap[status];
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+    const statusClass = statusMap[status] || 'bg-gray-100 text-gray-800';
+    const statusLabel = {
+      oddano: 'Oddano',
+      potrjeno: 'Potrjeno',
+      poslano: 'Poslano',
+      dostavljeno: 'Dostavljeno',
+      preklicano: 'Preklicano',
+    }[status] || status;
+
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+        {statusLabel}
+      </span>
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -187,7 +204,7 @@ export default function Orders() {
                     <CardTitle className="text-lg">
                       Naročilo #{order.id.slice(-8)}
                     </CardTitle>
-                    {getStatusBadge(order.status)}
+                    {getStatusBadge(order.status, order.opombe)}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">

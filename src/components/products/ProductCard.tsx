@@ -193,6 +193,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                   €{product.cena.toFixed(2)}
                 </span>
               )}
+              <p className="text-xs text-gray-500">DDV vključen</p>
             </div>
           </div>
 

@@ -58,13 +58,36 @@ serve(async (req) => {
       )
     }
 
-    // Get order details
-    const { data: order, error: orderError } = await supabase
+    // Check if user is admin
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('vloga')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError) {
+      return new Response(
+        JSON.stringify({ error: 'Error checking user permissions' }), 
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    const isAdmin = profile?.vloga === 'admin'
+
+    // Get order details - admin can access any order, others only their own
+    let orderQuery = supabase
       .from('narocila')
       .select('*')
       .eq('id', orderId)
-      .eq('uporabnik_id', user.id) // Ensure user owns this order
-      .single()
+
+    if (!isAdmin) {
+      orderQuery = orderQuery.eq('uporabnik_id', user.id) // Ensure user owns this order
+    }
+
+    const { data: order, error: orderError } = await orderQuery.single()
 
     if (orderError || !order) {
       return new Response(
@@ -87,10 +110,13 @@ serve(async (req) => {
     // Parse artikli
     const artikli = typeof order.artikli === 'string' ? JSON.parse(order.artikli) : order.artikli
 
-    // Calculate totals
-    const subtotal = order.skupna_cena
-    const vat = order.customer_type === 'business' ? 0 : subtotal * 0.22
-    const total = subtotal + vat
+    // Calculate totals - DDV is already included in prices
+    const totalWithVat = order.skupna_cena // This already includes VAT
+    const netValue = totalWithVat / 1.22 // Calculate net value (without VAT)
+    const vatAmount = totalWithVat - netValue // Calculate VAT amount
+    
+    // For business customers: show net value only (no VAT)
+    // For personal customers: show net value + VAT breakdown
 
     // Create HTML for PDF
     const htmlContent = `
@@ -255,21 +281,21 @@ serve(async (req) => {
 
     ${order.customer_type === 'business' ? `
     <div class="business-notice">
-        ⚠️ Kupec je pravna oseba – račun brez DDV v skladu s 1. točko 94. člena ZDDV-1
+        ⚠️ Kupec je pravna oseba – prikazana je neto vrednost brez DDV v skladu s 1. točko 94. člena ZDDV-1
     </div>
     ` : ''}
 
     <div class="total-section">
         <div class="total-row">
-            <span>Neto vrednost: €${subtotal.toFixed(2)}</span>
+            <span>Neto vrednost: €${netValue.toFixed(2)}</span>
         </div>
         ${order.customer_type === 'personal' ? `
         <div class="total-row">
-            <span>DDV (22%): €${vat.toFixed(2)}</span>
+            <span>DDV (22%): €${vatAmount.toFixed(2)}</span>
         </div>
         ` : ''}
         <div class="total-row final">
-            <span>SKUPAJ ZA PLAČILO: €${order.customer_type === 'business' ? subtotal.toFixed(2) : total.toFixed(2)}</span>
+            <span>SKUPAJ ZA PLAČILO: €${totalWithVat.toFixed(2)}</span>
         </div>
     </div>
 

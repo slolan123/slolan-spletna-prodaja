@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2 } from 'lucide-react';
@@ -191,6 +190,8 @@ export default function Cart() {
                   <span>{t('cart.total')}</span>
                   <span className="text-primary">€{getTotalPrice().toFixed(2)}</span>
                 </div>
+                
+                <p className="text-sm text-gray-600 text-center">DDV vključen</p>
                 
                 <Button className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300" size="lg" asChild>
                   <Link to="/checkout">

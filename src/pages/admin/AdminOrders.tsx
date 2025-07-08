@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Search, Eye, Package, Calendar, CreditCard } from 'lucide-react';
+import { ShoppingBag, Search, Eye, Package, Calendar, CreditCard, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,6 +84,55 @@ export default function AdminOrders() {
       toast({
         title: "Napaka",
         description: "Napaka pri spreminjanju statusa naročila.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadInvoice = async (orderId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Napaka",
+          description: "Ni aktivne seje.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-invoice?orderId=${orderId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `racun-${orderId}.html`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Račun prenesen",
+        description: "Račun je bil uspešno prenesen.",
+      });
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast({
+        title: "Napaka",
+        description: "Prišlo je do napake pri generiranju računa.",
         variant: "destructive",
       });
     }
@@ -288,16 +337,26 @@ export default function AdminOrders() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setOrderDialogOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setOrderDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadInvoice(order.id)}
+                        title="Prenesi račun"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -308,7 +367,7 @@ export default function AdminOrders() {
 
       {/* Order Details Dialog */}
       <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-600 max-h-90vh overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>
               Naročilo #{selectedOrder?.id.slice(-8)}
@@ -338,20 +397,27 @@ export default function AdminOrders() {
               {/* Order Items */}
               <div>
                 <h4 className="font-semibold mb-2">Artikli ({selectedOrder.artikli.length})</h4>
-                <div className="space-y-2">
-                  {selectedOrder.artikli.map((artikel: any, index: number) => (
-                    <div key={index} className="flex justify-between items-center p-3 bg-muted rounded">
-                      <div>
-                        <div className="font-medium">{artikel.naziv}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Količina: {artikel.kolicina} × €{artikel.cena.toFixed(2)}
-                        </div>
-                      </div>
-                      <div className="font-semibold">
-                        €{(artikel.cena * artikel.kolicina).toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm border rounded bg-white">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="px-3 py-2 text-left">Naziv</th>
+                        <th className="px-3 py-2 text-right">Količina</th>
+                        <th className="px-3 py-2 text-right">Cena/kom</th>
+                        <th className="px-3 py-2 text-right">Skupaj</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedOrder.artikli.map((artikel: any, index: number) => (
+                        <tr key={index} className="border-b last:border-b-0">
+                          <td className="px-3 py-2 font-medium">{artikel.naziv}</td>
+                          <td className="px-3 py-2 text-right">{artikel.kolicina}</td>
+                          <td className="px-3 py-2 text-right">€{artikel.cena ? artikel.cena.toFixed(2) : '-'}</td>
+                          <td className="px-3 py-2 text-right">€{artikel.cena && artikel.kolicina ? (artikel.cena * artikel.kolicina).toFixed(2) : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -359,9 +425,25 @@ export default function AdminOrders() {
               {selectedOrder.opombe && (
                 <div>
                   <h4 className="font-semibold mb-2">Opombe</h4>
-                  <p className="text-sm text-muted-foreground p-3 bg-muted rounded">
-                    {selectedOrder.opombe}
-                  </p>
+                  <div className="text-sm text-muted-foreground p-3 bg-muted rounded break-words whitespace-pre-wrap">
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(selectedOrder.opombe);
+                        // Prikažem samo ključne podatke, če obstajajo
+                        const keys = ['payment_status', 'amount_cents', 'currency', 'payment_provider', 'payment_session_id', 'nexi_transaction_id'];
+                        return (
+                          <ul className="list-disc pl-5">
+                            {keys.filter(k => parsed[k]).map(k => (
+                              <li key={k}><b>{k.replace(/_/g, ' ')}:</b> {parsed[k]}</li>
+                            ))}
+                          </ul>
+                        );
+                      } catch {
+                        // Če ni JSON, prikažem kot tekst
+                        return selectedOrder.opombe;
+                      }
+                    })()}
+                  </div>
                 </div>
               )}
             </div>

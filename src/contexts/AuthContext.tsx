@@ -175,12 +175,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signOut = async () => {
     try {
+      // Check if user is actually signed in before attempting sign out
+      if (!user || !session) {
+        console.log('No active session found, clearing local state only');
+        setUser(null);
+        setSession(null);
+        setProfile(null);
+        toast({
+          title: t('auth.logoutSuccess'),
+        });
+        return;
+      }
+
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Sign out error:', error);
+        // Even if Supabase signOut fails, clear local state
+        setUser(null);
+        setSession(null);
+        setProfile(null);
         toast({
-          title: t('errors.general'),
-          variant: 'destructive',
+          title: t('auth.logoutSuccess'),
         });
       } else {
         setUser(null);
@@ -192,6 +207,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     } catch (error) {
       console.error('Sign out error:', error);
+      // Clear local state even if there's an error
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      toast({
+        title: t('auth.logoutSuccess'),
+      });
     }
   };
 

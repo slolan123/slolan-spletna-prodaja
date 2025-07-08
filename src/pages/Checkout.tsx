@@ -505,6 +505,8 @@ export default function Checkout() {
                   <span className="text-gray-900">{t('checkout.orderTotal')}</span>
                   <span className="text-primary">€{getTotalPrice().toFixed(2)}</span>
                 </div>
+                
+                <p className="text-sm text-gray-600 text-center">DDV vključen</p>
               </CardContent>
             </Card>
           </motion.div>

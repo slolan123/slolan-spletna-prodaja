@@ -32,11 +32,27 @@ export default function Orders() {
     if (!session) return;
 
     try {
-      // Open the invoice directly in a new tab
-      const invoiceUrl = `https://vkftjzirlmhsyvtodxzxa.supabase.co/functions/v1/generate-invoice?orderId=${orderId}`;
+      // Fetch invoice HTML with Authorization header
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-invoice?orderId=${orderId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Napaka pri generiranju računa');
+      }
+
+      const html = await response.text();
+      // Odpri HTML v novem oknu
       const newWindow = window.open('', '_blank');
       if (newWindow) {
-        newWindow.location.href = invoiceUrl;
+        newWindow.document.open();
+        newWindow.document.write(html);
+        newWindow.document.close();
       }
 
       toast({
@@ -235,8 +251,8 @@ export default function Orders() {
                     </div>
                   )}
 
-                  {/* Download Invoice Button - only for completed/confirmed orders */}
-                  {(order.status === 'potrjeno' || order.status === 'poslano' || order.status === 'dostavljeno') && (
+                  {/* Download Invoice Button - now also for 'oddano' orders */}
+                  {(['oddano', 'potrjeno', 'poslano', 'dostavljeno'].includes(order.status)) && (
                     <div className="pt-4 border-t">
                       <Button
                         onClick={() => downloadInvoice(order.id)}

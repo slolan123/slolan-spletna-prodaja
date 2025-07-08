@@ -471,6 +471,7 @@ export default function ProductDetail() {
                     €{product.cena.toFixed(2)}
                   </div>
                 )}
+                <p className="text-sm text-gray-600 mt-2">DDV vključen</p>
               </div>
             </motion.div>
 

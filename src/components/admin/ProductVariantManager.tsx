@@ -188,9 +188,24 @@ export const ProductVariantManager = ({
       if (!variant.color_name.trim()) {
         throw new Error('Ime barve je obvezno');
       }
-
+      if (variant.color_name.length > 50) {
+        throw new Error('Ime barve je lahko dolgo največ 50 znakov');
+      }
       if (variant.stock < 0) {
         throw new Error('Zaloga ne more biti negativna');
+      }
+
+      // Preveri, če že obstaja barva z istim imenom (razen če gre za update istega ID)
+      const { data: existing, error: checkError } = await supabase
+        .from('product_variants')
+        .select('id')
+        .eq('product_id', productId)
+        .eq('color_name', variant.color_name.trim());
+      if (checkError) {
+        throw new Error('Napaka pri preverjanju obstoječih barv: ' + (checkError.message || '')); 
+      }
+      if (existing && existing.length > 0 && (!variant.id || existing[0].id !== variant.id)) {
+        throw new Error('Barva z istim imenom za ta izdelek že obstaja!');
       }
 
       const variantData = {
@@ -203,40 +218,31 @@ export const ProductVariantManager = ({
         is_base: variant.is_base || false
       };
 
-      console.log('📊 Variant data to save:', variantData);
-      console.log('🖼️ Images in variantData:', variantData.images);
-      console.log('📊 Images length in variantData:', variantData.images?.length || 0);
-
       if (variant.id) {
-        console.log('🔄 Updating existing variant:', variant.id);
         const { data: updateData, error } = await supabase
           .from('product_variants')
           .update(variantData)
           .eq('id', variant.id)
           .select();
-        
         if (error) {
-          console.error('❌ Update error:', error);
-          throw error;
+          let msg = error.message || 'Napaka pri posodobitvi';
+          if (error.details) msg += ' | ' + error.details;
+          if (error.code) msg += ' (koda: ' + error.code + ')';
+          throw new Error(msg);
         }
-        console.log('✅ Update successful, returned data:', updateData);
-        console.log('🖼️ Images in returned data:', updateData?.[0]?.images);
       } else {
-        console.log('➕ Inserting new variant');
         const { data: insertData, error } = await supabase
           .from('product_variants')
           .insert([variantData])
           .select();
-        
         if (error) {
-          console.error('❌ Insert error:', error);
-          throw error;
+          let msg = error.message || 'Napaka pri dodajanju';
+          if (error.details) msg += ' | ' + error.details;
+          if (error.code) msg += ' (koda: ' + error.code + ')';
+          throw new Error(msg);
         }
-        console.log('✅ Insert successful, returned data:', insertData);
-        console.log('🖼️ Images in returned data:', insertData?.[0]?.images);
       }
 
-      console.log('🔄 Reloading variants...');
       await loadVariants();
       setEditingVariant(null);
       setNewVariant({
@@ -252,9 +258,11 @@ export const ProductVariantManager = ({
         title: "Uspešno",
         description: `Barvna različica je bila ${variant.id ? 'posodobljena' : 'dodana'}.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error saving variant:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Neznana napaka';
+      let errorMessage = error?.message || 'Neznana napaka';
+      if (error?.details) errorMessage += ' | ' + error.details;
+      if (error?.code) errorMessage += ' (koda: ' + error.code + ')';
       setErrors(prev => [...prev, `Napaka pri shranjevanju: ${errorMessage}`]);
       toast({
         title: "Napaka",

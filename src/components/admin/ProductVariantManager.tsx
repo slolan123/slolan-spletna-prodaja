@@ -393,37 +393,79 @@ export const ProductVariantManager = ({
             <Button 
               onClick={async () => {
                 try {
-                  console.log('🎨 Manually creating base color variant');
+                  if (!productId || typeof productId !== 'string' || productId.length !== 36) {
+                    toast({
+                      title: 'Napaka',
+                      description: 'ID izdelka ni veljaven UUID!',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  // Preveri, če že obstaja barva z istim imenom
+                  const { data: existing, error: checkError } = await supabase
+                    .from('product_variants')
+                    .select('id')
+                    .eq('product_id', productId)
+                    .eq('color_name', productBaseColor);
+                  if (checkError) {
+                    toast({
+                      title: 'Napaka',
+                      description: 'Napaka pri preverjanju obstoječih barv: ' + (checkError.message || ''),
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  if (existing && existing.length > 0) {
+                    toast({
+                      title: 'Napaka',
+                      description: 'Barva z istim imenom za ta izdelek že obstaja!',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  // Validacija slik
+                  let images = productBaseImages || [];
+                  if (!Array.isArray(images)) images = [];
+                  images = images.filter((img) => typeof img === 'string');
+                  // Sestavi podatke
                   const baseVariant = {
                     product_id: productId,
                     color_name: productBaseColor,
                     color_value: '',
-                    images: productBaseImages || [],
+                    images,
                     stock: 0,
                     available: true,
                     is_base: true
                   };
-                  
                   const { error } = await supabase
                     .from('product_variants')
                     .insert([baseVariant]);
-                  
                   if (error) {
-                    console.error('❌ Error creating base variant:', error);
+                    let msg = error.message || 'Napaka pri ustvarjanju osnovne barve';
+                    if (error.details) msg += ' | ' + error.details;
+                    if (error.code) msg += ' (koda: ' + error.code + ')';
                     toast({
-                      title: "Napaka",
-                      description: "Napaka pri ustvarjanju osnovne barvne različice.",
-                      variant: "destructive",
+                      title: 'Napaka',
+                      description: msg,
+                      variant: 'destructive',
                     });
+                    console.error('❌ Error creating base variant:', error);
                   } else {
-                    console.log('✅ Base variant created manually');
                     await loadVariants();
                     toast({
-                      title: "Uspešno",
-                      description: "Osnovna barvna različica je bila ustvarjena.",
+                      title: 'Uspešno',
+                      description: 'Osnovna barvna različica je bila ustvarjena.',
                     });
                   }
-                } catch (error) {
+                } catch (error: any) {
+                  let msg = error?.message || 'Neznana napaka';
+                  if (error?.details) msg += ' | ' + error.details;
+                  if (error?.code) msg += ' (koda: ' + error.code + ')';
+                  toast({
+                    title: 'Napaka',
+                    description: msg,
+                    variant: 'destructive',
+                  });
                   console.error('❌ Error:', error);
                 }
               }}

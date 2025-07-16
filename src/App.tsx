@@ -41,10 +41,36 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user has already unlocked the site
+    // Always check lock status on every page load/refresh
     const unlocked = localStorage.getItem('slolan-unlocked') === 'true';
-    setIsUnlocked(unlocked);
+    const unlockTimestamp = localStorage.getItem('slolan-unlock-timestamp');
+    
+    // Check if session has expired (24 hours)
+    const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    const isSessionExpired = unlockTimestamp && 
+      (Date.now() - parseInt(unlockTimestamp)) > SESSION_TIMEOUT;
+    
+    if (isSessionExpired) {
+      // Clear expired session
+      localStorage.removeItem('slolan-unlocked');
+      localStorage.removeItem('slolan-unlock-timestamp');
+      setIsUnlocked(false);
+    } else {
+      setIsUnlocked(unlocked);
+    }
+    
     setIsLoading(false);
+  }, []);
+
+  // Add event listener for storage changes (in case localStorage is cleared)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const unlocked = localStorage.getItem('slolan-unlocked') === 'true';
+      setIsUnlocked(unlocked);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleUnlock = () => {

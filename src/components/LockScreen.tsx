@@ -15,25 +15,54 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const CORRECT_CODE = '123456';
+  // Clear any existing unlock state when component mounts
+  useEffect(() => {
+    localStorage.removeItem('slolan-unlocked');
+    localStorage.removeItem('slolan-unlock-timestamp');
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const verifyCode = async (code: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/functions/v1/verify-lock-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code })
+      });
+
+      const data = await response.json();
+      return data.success;
+    } catch (error) {
+      console.error('Error verifying code:', error);
+      return false;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Simulate a small delay for better UX
-    setTimeout(() => {
-      if (code === CORRECT_CODE) {
-        // Store in localStorage to remember unlock state
+    try {
+      const isValid = await verifyCode(code);
+      
+      if (isValid) {
+        // Store in localStorage to remember unlock state with timestamp
+        const timestamp = Date.now();
         localStorage.setItem('slolan-unlocked', 'true');
+        localStorage.setItem('slolan-unlock-timestamp', timestamp.toString());
         onUnlock();
       } else {
         setError('Napačna koda. Poskusite znova.');
         setCode('');
       }
+    } catch (error) {
+      setError('Napaka pri preverjanju kode. Poskusite znova.');
+      setCode('');
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

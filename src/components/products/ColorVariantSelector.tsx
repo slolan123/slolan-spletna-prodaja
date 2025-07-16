@@ -29,7 +29,7 @@ export const ColorVariantSelector = ({
 }: ColorVariantSelectorProps) => {
   if (!variants || variants.length === 0) return null;
 
-  const availableVariants = variants.filter(v => v.available && v.stock > 0);
+  const availableVariants = variants.filter(v => v.available);
 
   if (displayMode === 'dropdown') {
     return (
